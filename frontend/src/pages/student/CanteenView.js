@@ -124,11 +124,20 @@ export default function CanteenView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading menu...</p>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50">
+        <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-orange-100">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+              <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse" />
+            </div>
+          </div>
+        </header>
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-4" />
+          <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mb-8" />
+          <SkeletonLoader type="menu" count={6} />
+        </main>
       </div>
     );
   }
