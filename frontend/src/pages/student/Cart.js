@@ -139,6 +139,17 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+      <SuccessCelebration
+        show={showSuccess}
+        onClose={() => {
+          setShowSuccess(false);
+          navigate('/student/orders/tracking');
+        }}
+        title="Order Placed Successfully!"
+        message="Show your token number at the counter"
+        tokenNumber={orderToken}
+      />
+
       <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-orange-100">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
