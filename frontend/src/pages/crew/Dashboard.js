@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, CheckCircle, Clock, LogOut } from 'lucide-react';
+import { Utensils, CheckCircle, Clock, LogOut, Wifi } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import api from '@/utils/api';
 import { getAuth, clearAuth } from '@/utils/auth';
+import { getSocket, joinRoom, leaveRoom } from '@/utils/socket';
 import { toast } from 'sonner';
 
 export default function CrewDashboard() {
