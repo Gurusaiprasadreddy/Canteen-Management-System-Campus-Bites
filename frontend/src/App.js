@@ -17,6 +17,7 @@ import CrewLogin from "@/pages/crew/Login";
 import CrewDashboard from "@/pages/crew/Dashboard";
 import ManagementLogin from "@/pages/management/Login";
 import ManagementDashboard from "@/pages/management/Dashboard";
+import MenuManagement from "@/pages/management/MenuManagement";
 
 function App() {
   return (
