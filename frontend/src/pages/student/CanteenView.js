@@ -9,6 +9,8 @@ import api from '@/utils/api';
 import { getAuth } from '@/utils/auth';
 import { addToCart, getCartItemCount } from '@/utils/cart';
 import { toast } from 'sonner';
+import SkeletonLoader from '@/components/SkeletonLoader';
+import EmptyState from '@/components/EmptyState';
 
 export default function CanteenView() {
   const { canteenId } = useParams();
