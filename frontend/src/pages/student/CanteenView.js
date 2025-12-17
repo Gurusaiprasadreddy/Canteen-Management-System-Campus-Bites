@@ -295,7 +295,7 @@ export default function CanteenView() {
                   Add to Cart
                 </Button>
               </div>
-            </motion.div>
+            </div>
           ))}
         </div>
 
