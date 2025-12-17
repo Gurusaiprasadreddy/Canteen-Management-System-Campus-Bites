@@ -69,6 +69,25 @@ export default function CanteenView() {
       filtered = filtered.filter(item => item.category === selectedCategory);
     }
 
+    // Allergy filters
+    if (selectedAllergyFilter !== 'all') {
+      filtered = filtered.filter(item => {
+        const allergens = item.allergens.toLowerCase();
+        switch (selectedAllergyFilter) {
+          case 'dairy-free':
+            return !allergens.includes('dairy');
+          case 'gluten-free':
+            return !allergens.includes('gluten');
+          case 'nut-free':
+            return !allergens.includes('nut');
+          case 'veg-only':
+            return item.veg_type === 'veg';
+          default:
+            return true;
+        }
+      });
+    }
+
     // Sort items
     filtered = [...filtered].sort((a, b) => {
       switch (sortBy) {
