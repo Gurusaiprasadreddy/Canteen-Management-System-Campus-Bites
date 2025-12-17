@@ -63,10 +63,18 @@ export default function ManagementDashboard() {
               <Utensils className="w-6 h-6 text-orange-500" />
               <span className="text-xl font-bold">Management Portal</span>
             </div>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:text-orange-500" data-testid="logout-btn">
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <Link to="/management/menu">
+                <Button variant="ghost" size="sm" className="text-white hover:text-orange-500">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Menu Management
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="text-white hover:text-orange-500" data-testid="logout-btn">
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
           </div>
         </div>
       </header>
