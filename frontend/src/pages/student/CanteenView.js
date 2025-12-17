@@ -34,7 +34,7 @@ export default function CanteenView() {
 
   useEffect(() => {
     filterItems();
-  }, [searchQuery, selectedCategory, menuItems]);
+  }, [searchQuery, selectedCategory, sortBy, menuItems]);
 
   const fetchData = async () => {
     try {
