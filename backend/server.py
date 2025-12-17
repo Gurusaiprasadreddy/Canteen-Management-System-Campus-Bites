@@ -358,15 +358,17 @@ async def verify_payment(order_id: str, payment_id: str, signature: str, user: d
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Verify signature
-    try:
-        razorpay_client.utility.verify_payment_signature({
-            'razorpay_order_id': order['razorpay_order_id'],
-            'razorpay_payment_id': payment_id,
-            'razorpay_signature': signature
-        })
-    except:
-        raise HTTPException(status_code=400, detail="Payment verification failed")
+    # Verify signature (skip in test mode)
+    if RAZORPAY_ENABLED and razorpay_client:
+        try:
+            razorpay_client.utility.verify_payment_signature({
+                'razorpay_order_id': order['razorpay_order_id'],
+                'razorpay_payment_id': payment_id,
+                'razorpay_signature': signature
+            })
+        except:
+            raise HTTPException(status_code=400, detail="Payment verification failed")
+    # In test mode, always pass verification
     
     # Update order status
     await db.orders.update_one(
