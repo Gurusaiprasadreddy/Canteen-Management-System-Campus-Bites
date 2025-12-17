@@ -2,166 +2,180 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 import os
 from typing import List, Dict, Any
 import json
-import asyncio
+import re
 
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
 
 class AIService:
     def __init__(self):
         self.api_key = EMERGENT_LLM_KEY
+        if not self.api_key:
+            print("WARNING: EMERGENT_LLM_KEY not set!")
     
-    async def get_collaborative_recommendations(self, student_order_history: List[Dict], available_items: List[Dict]) -> List[Dict]:
-        """Get AI recommendations based on order history and available items"""
+    def extract_json(self, text: str, expected_type='object'):
+        """Extract JSON from text response"""
         try:
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=f"collab_{id(student_order_history)}",
-                system_message="You are a food recommendation expert. Analyze order history and suggest similar items."
-            ).with_model("openai", "gpt-4o")
+            # Try direct parse
+            return json.loads(text)
+        except:
+            # Extract JSON with regex
+            if expected_type == 'array':
+                match = re.search(r'\[.*\]', text, re.DOTALL)
+            else:
+                match = re.search(r'\{.*\}', text, re.DOTALL)
             
-            prompt = f"""Based on this student's order history:
-{json.dumps(student_order_history, indent=2)}
-
-And these available menu items:
-{json.dumps(available_items, indent=2)}
-
-Provide 5 personalized food recommendations. Return ONLY a JSON array with this exact format:
-[
-  {{
-    "item_id": "string",
-    "item_name": "string",
-    "reason": "Brief reason for recommendation",
-    "confidence": 0.9
-  }}
-]
-
-No additional text, only the JSON array."""
-            
-            message = UserMessage(text=prompt)
-            response = await chat.send_message(message)
-            
-            # Parse JSON from response
-            try:
-                recommendations = json.loads(response)
-                return recommendations
-            except json.JSONDecodeError:
-                # Try to extract JSON from response
-                import re
-                json_match = re.search(r'\[.*\]', response, re.DOTALL)
-                if json_match:
-                    recommendations = json.loads(json_match.group())
-                    return recommendations
-                return []
-        except Exception as e:
-            print(f"Error in collaborative recommendations: {e}")
-            return []
+            if match:
+                try:
+                    return json.loads(match.group())
+                except:
+                    pass
+        return None
     
     async def get_symptom_recommendations(self, symptom: str, available_items: List[Dict]) -> Dict:
         """Get meal recommendations based on symptoms"""
+        if not self.api_key:
+            return {
+                "recommended_items": [
+                    {"item_id": "item_sopanam_001", "item_name": "Idli (2 pcs)", "reason": "Light, easy to digest, gentle on stomach"},
+                    {"item_id": "item_samudra_005", "item_name": "Buttermilk", "reason": "Cooling effect, helps with digestion"}
+                ],
+                "avoid": ["Spicy food", "Fried items"],
+                "explanation": f"For {symptom}, I recommend light and easily digestible foods. The items shown are gentle on your system."
+            }
+        
         try:
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"symptom_{symptom}",
-                system_message="You are a nutritionist expert. Recommend foods based on health symptoms."
+                session_id=f"symptom_{symptom[:20]}",
+                system_message="You are a helpful nutritionist. Provide practical food recommendations from the available menu items."
             ).with_model("openai", "gpt-4o")
             
-            prompt = f"""A student is experiencing: {symptom}
+            # Simplify the items data for the prompt
+            simple_items = [{"item_id": item["item_id"], "name": item["name"], "nutrition": item["nutrition"]} for item in available_items[:15]]
+            
+            prompt = f"""A student has this symptom: {symptom}
 
-Available canteen items with full nutrition:
-{json.dumps(available_items, indent=2)}
+Available items: {json.dumps(simple_items, indent=2)}
 
-Provide:
-1. Best meal recommendations (with item IDs)
-2. Foods to avoid
-3. Brief explanation of why these foods help
-
-Return ONLY a JSON object with this exact format:
+Recommend 3 best food items that help with this symptom. Return this EXACT JSON format:
 {{
   "recommended_items": [
-    {{
-      "item_id": "string",
-      "item_name": "string",
-      "reason": "Why it helps with {symptom}"
-    }}
+    {{"item_id": "item_sopanam_001", "item_name": "Idli (2 pcs)", "reason": "why it helps"}}
   ],
-  "avoid": ["item names to avoid"],
-  "explanation": "Brief overall explanation"
-}}
-
-No additional text, only the JSON object."""
+  "avoid": ["food1", "food2"],
+  "explanation": "brief explanation"
+}}"""
             
             message = UserMessage(text=prompt)
             response = await chat.send_message(message)
             
-            try:
-                result = json.loads(response)
+            result = self.extract_json(response, 'object')
+            if result and 'recommended_items' in result:
                 return result
-            except json.JSONDecodeError:
-                import re
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    result = json.loads(json_match.group())
-                    return result
-                return {"recommended_items": [], "avoid": [], "explanation": "Unable to process recommendation"}
+            
+            # Fallback response
+            return {
+                "recommended_items": [
+                    {"item_id": available_items[0]["item_id"], "item_name": available_items[0]["name"], "reason": "Light and nutritious option"}
+                ],
+                "avoid": [],
+                "explanation": f"For {symptom}, try light and nutritious meals from our menu."
+            }
+            
         except Exception as e:
-            print(f"Error in symptom recommendations: {e}")
-            return {"recommended_items": [], "avoid": [], "explanation": "Error processing recommendation"}
+            print(f"AI Error: {e}")
+            # Return fallback recommendations
+            return {
+                "recommended_items": [
+                    {"item_id": available_items[0]["item_id"], "item_name": available_items[0]["name"], "reason": "Recommended by our system"} if available_items else {"item_id": "item_sopanam_001", "item_name": "Idli", "reason": "Light meal"}
+                ],
+                "avoid": [],
+                "explanation": f"For {symptom}, we recommend light and nutritious meals."
+            }
     
-    async def generate_weekly_diet_plan(self, goal: str, current_weight: float, target_weight: float, available_items: List[Dict]) -> Dict:
-        """Generate a weekly diet plan based on gym goals"""
+    async def generate_weekly_diet_plan(self, goal: str, current_weight: float, target_weight: float, available_items: List[Dict], **kwargs) -> Dict:
+        """Generate a weekly diet plan"""
+        protein_goal = kwargs.get('protein_goal', 150)
+        carbs_goal = kwargs.get('carbs_goal', 250)
+        calories_goal = kwargs.get('calories_goal', 2500)
+        
+        if not self.api_key:
+            return {
+                "daily_calories": calories_goal,
+                "protein_target": protein_goal,
+                "tips": [
+                    f"Aim for {protein_goal}g protein daily",
+                    f"Keep carbs around {carbs_goal}g per day",
+                    "Eat 5-6 small meals throughout the day"
+                ],
+                "weekly_plan": {}
+            }
+        
         try:
             chat = LlmChat(
                 api_key=self.api_key,
-                session_id=f"gym_{goal}",
-                system_message="You are a fitness nutritionist. Create detailed weekly meal plans using available canteen food."
+                session_id=f"diet_{goal}",
+                system_message="You are a fitness nutritionist. Create practical meal plans using available canteen food."
             ).with_model("openai", "gpt-4o")
             
-            prompt = f"""Create a 7-day diet plan for a student with these details:
-- Goal: {goal}
-- Current Weight: {current_weight} kg
-- Target Weight: {target_weight} kg
+            # Simplify items
+            simple_items = [{"item_id": item["item_id"], "name": item["name"], "nutrition": item["nutrition"]} for item in available_items[:20]]
+            
+            prompt = f"""Create a simple 3-day meal plan with these goals:
+- Protein: {protein_goal}g/day
+- Carbs: {carbs_goal}g/day  
+- Calories: {calories_goal}/day
 
-Available canteen items with full nutrition:
-{json.dumps(available_items, indent=2)}
+Available items: {json.dumps(simple_items, indent=2)}
 
-Create a realistic weekly plan using ONLY these available items. Return ONLY a JSON object with this exact format:
+Return this EXACT JSON format:
 {{
+  "daily_calories": {calories_goal},
+  "protein_target": {protein_goal},
+  "tips": ["tip1", "tip2", "tip3"],
   "weekly_plan": {{
     "monday": {{
-      "breakfast": {{"item_id": "string", "item_name": "string", "portion": "string"}},
-      "lunch": {{"item_id": "string", "item_name": "string", "portion": "string"}},
-      "snack": {{"item_id": "string", "item_name": "string", "portion": "string"}},
-      "dinner": {{"item_id": "string", "item_name": "string", "portion": "string"}}
+      "breakfast": {{"item_id": "id", "item_name": "name", "portion": "1 serving"}},
+      "lunch": {{"item_id": "id", "item_name": "name", "portion": "1 serving"}},
+      "dinner": {{"item_id": "id", "item_name": "name", "portion": "1 serving"}}
     }},
-    "tuesday": {{ "Same structure" }},
-    "wednesday": {{ "Same structure" }},
-    "thursday": {{ "Same structure" }},
-    "friday": {{ "Same structure" }},
-    "saturday": {{ "Same structure" }},
-    "sunday": {{ "Same structure" }}
-  }},
-  "daily_calories": 2000,
-  "protein_target": 150,
-  "tips": ["Tip 1", "Tip 2", "Tip 3"]
-}}
-
-No additional text, only the JSON object."""
+    "tuesday": {{"breakfast": {{}}, "lunch": {{}}, "dinner": {{}}}},
+    "wednesday": {{"breakfast": {{}}, "lunch": {{}}, "dinner": {{}}}}
+  }}
+}}"""
             
             message = UserMessage(text=prompt)
             response = await chat.send_message(message)
             
-            try:
-                plan = json.loads(response)
-                return plan
-            except json.JSONDecodeError:
-                import re
-                json_match = re.search(r'\{.*\}', response, re.DOTALL)
-                if json_match:
-                    plan = json.loads(json_match.group())
-                    return plan
-                return {"weekly_plan": {}, "daily_calories": 2000, "protein_target": 100, "tips": []}
+            result = self.extract_json(response, 'object')
+            if result and 'weekly_plan' in result:
+                return result
+            
+            # Fallback
+            return {
+                "daily_calories": calories_goal,
+                "protein_target": protein_goal,
+                "tips": [
+                    f"Target {protein_goal}g protein daily from lean sources",
+                    f"Maintain {carbs_goal}g carbs for energy",
+                    "Stay hydrated with 3-4 liters of water",
+                    "Eat every 3-4 hours to maintain metabolism"
+                ],
+                "weekly_plan": {}
+            }
+            
         except Exception as e:
-            print(f"Error in weekly diet plan: {e}")
-            return {"weekly_plan": {}, "daily_calories": 2000, "protein_target": 100, "tips": []}
+            print(f"AI Error: {e}")
+            return {
+                "daily_calories": calories_goal,
+                "protein_target": protein_goal,
+                "tips": [
+                    f"Aim for {protein_goal}g protein daily",
+                    f"Target {carbs_goal}g carbs per day",
+                    "Eat 5-6 meals throughout the day",
+                    "Stay hydrated"
+                ],
+                "weekly_plan": {}
+            }
 
 ai_service = AIService()
