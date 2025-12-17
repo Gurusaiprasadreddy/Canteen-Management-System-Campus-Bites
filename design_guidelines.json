@@ -1,0 +1,155 @@
+{
+  "brand_identity": {
+    "name": "Campus Bites",
+    "mission": "To revolutionize the campus dining experience by blending appetizing visuals with enterprise-grade efficiency.",
+    "persona": "E1: The Anti-AI Designer",
+    "vibe": {
+      "student": "Neo-Brutalist Soft - Appetizing, Fast, Friendly",
+      "admin": "Deep Space Command - High Contrast, Data-Dense, Serious"
+    },
+    "emotional_tone": "Fresh, Trustworthy, Tech-Forward"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Manrope, sans-serif",
+      "weights": ["600", "800"],
+      "usage": "All section headers, hero titles, and modal titles. Use tight tracking (-0.02em)."
+    },
+    "body": {
+      "font_family": "Inter, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Paragraphs, labels, inputs. Optimized for legibility."
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "weights": ["400"],
+      "usage": "Order tokens, receipts, code snippets, inventory IDs."
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "DEFAULT": "hsl(12, 90%, 55%)",
+        "foreground": "hsl(0, 0%, 100%)",
+        "description": "Vibrant Coral/Orange - Appetizing and Urgent"
+      },
+      "secondary": {
+        "DEFAULT": "hsl(150, 40%, 96%)",
+        "foreground": "hsl(150, 100%, 25%)",
+        "description": "Mint Fresh - For healthy options and success states"
+      },
+      "accent": {
+        "DEFAULT": "hsl(210, 100%, 60%)",
+        "foreground": "hsl(0, 0%, 100%)",
+        "description": "Electric Blue - For Admin/Crew status indicators"
+      },
+      "background": {
+        "light": "hsl(30, 30%, 98%)",
+        "dark": "hsl(222, 47%, 11%)",
+        "description": "Warm White for Students, Deep Slate for Admin"
+      }
+    },
+    "gradients": {
+      "hero": "linear-gradient(135deg, hsl(12, 90%, 55%) 0%, hsl(35, 100%, 60%) 100%)",
+      "glass": "linear-gradient(180deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.3) 100%)"
+    }
+  },
+  "layout_strategies": {
+    "student_app": {
+      "grid": "Mobile-first, single column. Horizontal scroll for categories.",
+      "spacing": "Generous (p-6, p-8). Cards must have internal padding.",
+      "container": "Max-width-md for mobile view simulation on desktop if needed, or full responsive."
+    },
+    "admin_dashboard": {
+      "grid": "Bento Grid (Grid-cols-4 or Grid-cols-12). Dense.",
+      "spacing": "Tight (gap-4, p-4).",
+      "surface": "Glassmorphism panels on dark background."
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "rounded-3xl border-none shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white",
+      "hover": "scale-[1.02] transition-transform duration-300"
+    },
+    "buttons": {
+      "primary": "rounded-full px-8 py-6 font-bold shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40 transition-all",
+      "secondary": "rounded-full bg-stone-100 text-stone-900 hover:bg-stone-200"
+    },
+    "inputs": {
+      "style": "rounded-xl border-stone-200 bg-stone-50 focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "backdrop-blur-xl bg-white/70 border border-white/20",
+    "shadows": {
+      "soft": "0 20px 40px -15px rgba(0,0,0,0.05)",
+      "neon": "0 0 20px rgba(12, 165, 235, 0.3)"
+    },
+    "textures": "Subtle noise overlay (opacity 0.03) on all solid backgrounds to prevent digital flatness."
+  },
+  "motion": {
+    "libraries": ["framer-motion", "lenis"],
+    "rules": [
+      "No 'transition: all'. Animate specific properties.",
+      "Stagger children animations for lists.",
+      "Use spring physics for interactions (stiffness: 400, damping: 30)."
+    ]
+  },
+  "image_urls": {
+    "hero_food": [
+      {
+        "url": "https://images.unsplash.com/photo-1663086195364-fd8eca0f2c78?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxzb3V0aCUyMGluZGlhbiUyMG1hc2FsYSUyMGRvc2ElMjBvbiUyMGJhbmFuYSUyMGxlYWZ8ZW58MHx8fHwxNzY1OTgxNTc2fDA&ixlib=rb-4.1.0&q=85",
+        "description": "South Indian Dosa on Banana Leaf - Hero Section",
+        "category": "food"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1516709315038-c53bf87e8f48?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2MzR8MHwxfHNlYXJjaHwxfHxub3J0aCUyMGluZGlhbiUyMHRoYWxpJTIwcGFuZWVyJTIwcm90aXxlbnwwfHx8fDE3NjU5ODE1Nzh8MA&ixlib=rb-4.1.0&q=85",
+        "description": "North Indian Thali - Menu Highlight",
+        "category": "food"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1613478223719-2ab802602423?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2NDJ8MHwxfHNlYXJjaHwxfHxmcmVzaCUyMGZydWl0JTIwanVpY2UlMjBnbGFzc3xlbnwwfHx8fDE3NjU5ODE1ODR8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Fresh Orange Juice - Beverages",
+        "category": "food"
+      }
+    ],
+    "lifestyle": [
+      {
+        "url": "https://images.unsplash.com/photo-1682962232755-f1d051ddb638?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2Njl8MHwxfHNlYXJjaHwxfHxpbmRpYW4lMjBjb2xsZWdlJTIwc3R1ZGVudHMlMjBsYXVnaGluZyUyMGNhbXB1c3xlbnwwfHx8fDE3NjU5ODE1Nzl8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Students studying on grass - Landing Page Social Proof",
+        "category": "people"
+      },
+      {
+        "url": "https://images.pexels.com/photos/7552066/pexels-photo-7552066.jpeg",
+        "description": "Chef cooking in kitchen - About Us / Quality Assurance",
+        "category": "people"
+      }
+    ]
+  },
+  "instructions_to_main_agent": {
+    "general": "You are building a high-end, production-grade app. Do not cut corners on UI. If a component looks default, customize it.",
+    "theme_implementation": "Implement a ThemeProvider that switches between 'student-light' and 'admin-dark' modes based on the route, not just a user toggle.",
+    "component_usage": "Use Shadcn for complex logic (Select, DatePicker, Dialog) but STRIP the default styling to match the E1 guidelines (Rounded-3xl, custom shadows).",
+    "testing": "Add data-testid to every interactive element. Format: 'section-element-action' (e.g., 'menu-item-add-btn')."
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
+  ]
+}
