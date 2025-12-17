@@ -7,6 +7,8 @@ import api from '@/utils/api';
 import { getAuth } from '@/utils/auth';
 import { getCart, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal } from '@/utils/cart';
 import { toast } from 'sonner';
+import SuccessCelebration from '@/components/SuccessCelebration';
+import EmptyState from '@/components/EmptyState';
 
 export default function Cart() {
   const navigate = useNavigate();
