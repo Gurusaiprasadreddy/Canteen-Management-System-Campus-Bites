@@ -68,6 +68,27 @@ export default function CanteenView() {
       filtered = filtered.filter(item => item.category === selectedCategory);
     }
 
+    // Sort items
+    filtered = [...filtered].sort((a, b) => {
+      switch (sortBy) {
+        case 'price-low':
+          return a.price - b.price;
+        case 'price-high':
+          return b.price - a.price;
+        case 'calories-low':
+          return a.nutrition.calories - b.nutrition.calories;
+        case 'calories-high':
+          return b.nutrition.calories - a.nutrition.calories;
+        case 'protein-high':
+          return b.nutrition.protein - a.nutrition.protein;
+        case 'carbs-low':
+          return a.nutrition.carbs - b.nutrition.carbs;
+        case 'name':
+        default:
+          return a.name.localeCompare(b.name);
+      }
+    });
+
     setFilteredItems(filtered);
   };
 
