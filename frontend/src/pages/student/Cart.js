@@ -59,13 +59,6 @@ export default function Cart() {
     setLoading(true);
 
     try {
-      const scriptLoaded = await loadRazorpayScript();
-      if (!scriptLoaded) {
-        toast.error('Failed to load payment gateway');
-        setLoading(false);
-        return;
-      }
-
       const orderItems = cart.map(item => ({
         item_id: item.item_id,
         item_name: item.name,
@@ -83,20 +76,23 @@ export default function Cart() {
 
       // If test mode, simulate payment immediately
       if (test_mode) {
-        try {
-          await api.post(`/orders/${order_id}/verify-payment`, {
-            payment_id: 'pay_test_' + Date.now(),
-            signature: 'test_signature'
-          });
+        await api.post(`/orders/${order_id}/verify-payment`, {
+          payment_id: 'pay_test_' + Date.now(),
+          signature: 'test_signature'
+        });
 
-          clearCart();
-          setCart([]);
-          setOrderToken(token_number);
-          setShowSuccess(true);
-        } catch (error) {
-          toast.error('Order creation failed');
-        }
+        clearCart();
+        setCart([]);
+        setOrderToken(token_number);
+        setShowSuccess(true);
       } else {
+        // Real Razorpay mode - load script only when needed
+        const scriptLoaded = await loadRazorpayScript();
+        if (!scriptLoaded) {
+          toast.error('Failed to load payment gateway');
+          setLoading(false);
+          return;
+        }
         // Real Razorpay mode
         const options = {
           key: razorpay_key_id,
