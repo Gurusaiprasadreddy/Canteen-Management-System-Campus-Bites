@@ -126,15 +126,13 @@ export default function Cart() {
 
   if (cart.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white flex items-center justify-center">
-        <div className="text-center">
-          <ShoppingCart className="w-24 h-24 text-gray-300 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-          <p className="text-gray-600 mb-6">Add some delicious items to get started!</p>
-          <Button onClick={() => navigate('/student/dashboard')} className="rounded-full" data-testid="back-to-menu-btn">
-            Browse Menu
-          </Button>
-        </div>
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 to-white">
+        <EmptyState
+          type="cart"
+          onAction={() => navigate('/student/dashboard')}
+          actionText="Browse Menu"
+          actionTestId="back-to-menu-btn"
+        />
       </div>
     );
   }
