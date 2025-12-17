@@ -1,52 +1,55 @@
-import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
-
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
-
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+// Import pages
+import Landing from "@/pages/Landing";
+import StudentLogin from "@/pages/student/Login";
+import StudentRegister from "@/pages/student/Register";
+import StudentDashboard from "@/pages/student/Dashboard";
+import CanteenView from "@/pages/student/CanteenView";
+import Cart from "@/pages/student/Cart";
+import OrderTracking from "@/pages/student/OrderTracking";
+import OrderHistory from "@/pages/student/OrderHistory";
+import SpendingAnalytics from "@/pages/student/SpendingAnalytics";
+import AIRecommendations from "@/pages/student/AIRecommendations";
+import CrewLogin from "@/pages/crew/Login";
+import CrewDashboard from "@/pages/crew/Dashboard";
+import ManagementLogin from "@/pages/management/Login";
+import ManagementDashboard from "@/pages/management/Dashboard";
 
 function App() {
   return (
     <div className="App">
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
+          {/* Landing Page */}
+          <Route path="/" element={<Landing />} />
+          
+          {/* Student Routes */}
+          <Route path="/student/login" element={<StudentLogin />} />
+          <Route path="/student/register" element={<StudentRegister />} />
+          <Route path="/student/dashboard" element={<StudentDashboard />} />
+          <Route path="/student/canteen/:canteenId" element={<CanteenView />} />
+          <Route path="/student/cart" element={<Cart />} />
+          <Route path="/student/orders/tracking" element={<OrderTracking />} />
+          <Route path="/student/orders/history" element={<OrderHistory />} />
+          <Route path="/student/spending" element={<SpendingAnalytics />} />
+          <Route path="/student/ai-recommendations" element={<AIRecommendations />} />
+          
+          {/* Crew Routes */}
+          <Route path="/crew/login" element={<CrewLogin />} />
+          <Route path="/crew/dashboard" element={<CrewDashboard />} />
+          
+          {/* Management Routes */}
+          <Route path="/management/login" element={<ManagementLogin />} />
+          <Route path="/management/dashboard" element={<ManagementDashboard />} />
+          
+          {/* Fallback */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
+      <Toaster position="top-right" expand={true} richColors />
     </div>
   );
 }
