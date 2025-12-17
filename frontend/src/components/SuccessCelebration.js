@@ -90,39 +90,27 @@ export default function SuccessCelebration({ show, onClose, title, message, toke
               </div>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="text-center"
-            >
+            <div className="text-center">
               <h2 className="text-3xl font-bold text-gray-900 mb-3">{title || 'Success!'}</h2>
               <p className="text-gray-600 mb-6">{message || 'Your action was completed successfully'}</p>
 
               {tokenNumber && (
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: 0.6 }}
-                  className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-6 mb-6 border-2 border-orange-200"
-                >
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-2xl p-6 mb-6 border-2 border-orange-200">
                   <p className="text-sm text-gray-600 mb-2">Your Token Number</p>
                   <p className="text-5xl font-mono font-bold text-orange-600 tracking-wider">
                     {tokenNumber}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">Show this to the crew counter</p>
-                </motion.div>
+                </div>
               )}
 
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={onClose}
                 className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-shadow"
               >
                 Awesome!
-              </motion.button>
-            </motion.div>
+              </button>
+            </div>
           </motion.div>
         </motion.div>
       )}
