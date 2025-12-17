@@ -14,6 +14,7 @@ export default function OrderTracking() {
   const { user } = getAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -21,6 +22,30 @@ export default function OrderTracking() {
       return;
     }
     fetchOrders();
+
+    // Initialize WebSocket
+    const socket = getSocket();
+    
+    socket.on('connect', () => {
+      setIsConnected(true);
+      joinRoom(user.user_id);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    socket.on('order_update', (data) => {
+      if (data.student_id === user.user_id) {
+        toast.success(`Order #${data.order_id.slice(-6)} updated to ${data.status}`);
+        fetchOrders();
+      }
+    });
+
+    return () => {
+      leaveRoom(user.user_id);
+      socket.off('order_update');
+    };
   }, [user, navigate]);
 
   const fetchOrders = async () => {
