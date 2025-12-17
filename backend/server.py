@@ -311,12 +311,17 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
     # Generate token number
     token_number = generate_token_number()
     
-    # Create Razorpay order
-    razorpay_order = razorpay_client.order.create({
-        "amount": int(order_data.total_amount * 100),  # Convert to paise
-        "currency": "INR",
-        "payment_capture": 1
-    })
+    # Create Razorpay order (test mode)
+    if RAZORPAY_ENABLED and razorpay_client:
+        razorpay_order = razorpay_client.order.create({
+            "amount": int(order_data.total_amount * 100),
+            "currency": "INR",
+            "payment_capture": 1
+        })
+        razorpay_order_id = razorpay_order['id']
+    else:
+        # Test mode - simulate order ID
+        razorpay_order_id = f"order_test_{uuid.uuid4().hex[:12]}"
     
     # Create order
     order = Order(
@@ -325,7 +330,7 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
         canteen_id=order_data.canteen_id,
         token_number=token_number,
         status="PENDING_PAYMENT",
-        razorpay_order_id=razorpay_order['id'],
+        razorpay_order_id=razorpay_order_id,
         total_amount=order_data.total_amount,
         expires_at=datetime.now(timezone.utc) + timedelta(minutes=10)
     )
