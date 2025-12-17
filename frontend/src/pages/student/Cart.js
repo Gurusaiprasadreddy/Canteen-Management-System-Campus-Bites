@@ -79,42 +79,60 @@ export default function Cart() {
         total_amount: total
       });
 
-      const { razorpay_order_id, razorpay_key_id, token_number, order_id } = orderResponse.data;
+      const { razorpay_order_id, razorpay_key_id, token_number, order_id, test_mode } = orderResponse.data;
 
-      const options = {
-        key: razorpay_key_id,
-        amount: total * 100,
-        currency: 'INR',
-        name: 'Campus Bites',
-        description: `Order for ${cart.length} items`,
-        order_id: razorpay_order_id,
-        handler: async function (response) {
-          try {
-            await api.post(`/orders/${order_id}/verify-payment`, {
-              payment_id: response.razorpay_payment_id,
-              signature: response.razorpay_signature
-            });
+      // If test mode, simulate payment immediately
+      if (test_mode) {
+        try {
+          await api.post(`/orders/${order_id}/verify-payment`, {
+            payment_id: 'pay_test_' + Date.now(),
+            signature: 'test_signature'
+          });
 
-            clearCart();
-            setCart([]);
-            setOrderToken(token_number);
-            setShowSuccess(true);
-          } catch (error) {
-            toast.error('Payment verification failed');
-          }
-        },
-        prefill: {
-          name: user.name,
-          email: user.email || '',
-          contact: ''
-        },
-        theme: {
-          color: '#f97316'
+          clearCart();
+          setCart([]);
+          setOrderToken(token_number);
+          setShowSuccess(true);
+        } catch (error) {
+          toast.error('Order creation failed');
         }
-      };
+      } else {
+        // Real Razorpay mode
+        const options = {
+          key: razorpay_key_id,
+          amount: total * 100,
+          currency: 'INR',
+          name: 'Campus Bites',
+          description: `Order for ${cart.length} items`,
+          order_id: razorpay_order_id,
+          handler: async function (response) {
+            try {
+              await api.post(`/orders/${order_id}/verify-payment`, {
+                payment_id: response.razorpay_payment_id,
+                signature: response.razorpay_signature
+              });
 
-      const razorpay = new window.Razorpay(options);
-      razorpay.open();
+              clearCart();
+              setCart([]);
+              setOrderToken(token_number);
+              setShowSuccess(true);
+            } catch (error) {
+              toast.error('Payment verification failed');
+            }
+          },
+          prefill: {
+            name: user.name,
+            email: user.email || '',
+            contact: ''
+          },
+          theme: {
+            color: '#f97316'
+          }
+        };
+
+        const razorpay = new window.Razorpay(options);
+        razorpay.open();
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Failed to create order');
     } finally {
