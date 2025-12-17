@@ -345,9 +345,10 @@ async def create_order(order_data: OrderCreate, user: dict = Depends(get_current
     return {
         "order_id": order.order_id,
         "token_number": token_number,
-        "razorpay_order_id": razorpay_order['id'],
-        "razorpay_key_id": os.environ.get('RAZORPAY_KEY_ID'),
-        "amount": order_data.total_amount
+        "razorpay_order_id": razorpay_order_id,
+        "razorpay_key_id": os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_demo'),
+        "amount": order_data.total_amount,
+        "test_mode": not RAZORPAY_ENABLED
     }
 
 @api_router.post("/orders/{order_id}/verify-payment")
