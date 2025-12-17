@@ -245,7 +245,7 @@ export default function CanteenView() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item, index) => (
+          {filteredItems.map((item) => (
             <div
               key={item.item_id}
               className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-200"
