@@ -246,13 +246,9 @@ export default function CanteenView() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item, index) => (
-            <motion.div
+            <div
               key={item.item_id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, type: 'spring', stiffness: 100 }}
-              whileHover={{ y: -8, scale: 1.02 }}
-              className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-2xl hover:border-orange-300 transition-all duration-300"
+              className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-200"
               data-testid={`menu-item-${item.item_id}`}
             >
               <div className="h-48 overflow-hidden bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
