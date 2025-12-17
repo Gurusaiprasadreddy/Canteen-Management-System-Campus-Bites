@@ -82,35 +82,13 @@ export default function SuccessCelebration({ show, onClose, title, message, toke
               <X className="w-6 h-6" />
             </button>
 
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring', damping: 15, stiffness: 300 }}
-              className="flex justify-center mb-6"
-            >
+            <div className="flex justify-center mb-6">
               <div className="relative">
-                <motion.div
-                  animate={{
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 10, -10, 0]
-                  }}
-                  transition={{ duration: 0.6, delay: 0.3 }}
-                  className="bg-gradient-to-br from-green-400 to-green-600 rounded-full p-6 shadow-lg"
-                >
+                <div className="bg-gradient-to-br from-green-400 to-green-600 rounded-full p-6 shadow-lg">
                   <CheckCircle className="w-16 h-16 text-white" strokeWidth={2.5} />
-                </motion.div>
-
-                {/* Pulse rings */}
-                <motion.div
-                  animate={{
-                    scale: [1, 2, 2],
-                    opacity: [0.5, 0, 0]
-                  }}
-                  transition={{ duration: 1, repeat: Infinity, repeatDelay: 0.5 }}
-                  className="absolute inset-0 bg-green-400 rounded-full"
-                />
+                </div>
               </div>
-            </motion.div>
+            </div>
 
             <motion.div
               initial={{ opacity: 0, y: 10 }}
