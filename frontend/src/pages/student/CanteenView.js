@@ -20,6 +20,7 @@ export default function CanteenView() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState('name');
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
