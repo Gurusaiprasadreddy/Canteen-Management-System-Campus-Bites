@@ -15,6 +15,8 @@ export default function Cart() {
   const { user } = getAuth();
   const [cart, setCart] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [orderToken, setOrderToken] = useState('');
 
   useEffect(() => {
     if (!user) {
