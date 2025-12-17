@@ -14,6 +14,7 @@ export default function CrewDashboard() {
   const { user } = getAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== 'crew') {
@@ -21,8 +22,30 @@ export default function CrewDashboard() {
       return;
     }
     fetchOrders();
-    const interval = setInterval(fetchOrders, 10000);
-    return () => clearInterval(interval);
+
+    const canteenId = user.canteen_id || 'sopanam';
+    const socket = getSocket();
+
+    socket.on('connect', () => {
+      setIsConnected(true);
+      joinRoom(canteenId);
+    });
+
+    socket.on('disconnect', () => {
+      setIsConnected(false);
+    });
+
+    socket.on('order_update', (data) => {
+      if (data.canteen_id === canteenId) {
+        toast.success(`New order received: #${data.order_id.slice(-6)}`);
+        fetchOrders();
+      }
+    });
+
+    return () => {
+      leaveRoom(canteenId);
+      socket.off('order_update');
+    };
   }, [user, navigate]);
 
   const fetchOrders = async () => {
