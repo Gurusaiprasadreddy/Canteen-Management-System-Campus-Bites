@@ -14,6 +14,20 @@ export default function CrewLogin() {
     window.location.href = authUrl;
   };
 
+  const handleTestLogin = () => {
+    // For testing - create a test crew session
+    const testCrew = {
+      user_id: 'crew_test_' + Date.now(),
+      name: 'Test Crew Member',
+      email: 'test.crew@gmail.com',
+      role: 'crew',
+      canteen_id: 'sopanam'
+    };
+    localStorage.setItem('user', JSON.stringify(testCrew));
+    localStorage.setItem('token', 'test_crew_token_' + Date.now());
+    navigate('/crew/dashboard');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 p-4">
       <motion.div
