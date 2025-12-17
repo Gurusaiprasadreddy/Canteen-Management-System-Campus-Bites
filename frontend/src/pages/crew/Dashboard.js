@@ -95,6 +95,10 @@ export default function CrewDashboard() {
             <div className="flex items-center gap-2">
               <Utensils className="w-6 h-6 text-blue-600" />
               <span className="text-xl font-bold text-blue-600">Crew Dashboard</span>
+              <div className="flex items-center gap-1 ml-4">
+                <Wifi className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
+                <span className="text-xs text-gray-600">{isConnected ? 'Live' : 'Offline'}</span>
+              </div>
             </div>
             <Button variant="ghost" size="sm" onClick={handleLogout} data-testid="logout-btn">
               <LogOut className="w-4 h-4 mr-2" />
