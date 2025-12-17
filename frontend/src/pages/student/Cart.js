@@ -97,8 +97,8 @@ export default function Cart() {
 
             clearCart();
             setCart([]);
-            toast.success(`Order placed! Token: ${token_number}`);
-            navigate('/student/orders/tracking');
+            setOrderToken(token_number);
+            setShowSuccess(true);
           } catch (error) {
             toast.error('Payment verification failed');
           }
