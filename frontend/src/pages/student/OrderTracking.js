@@ -126,6 +126,10 @@ export default function OrderTracking() {
               </Button>
               <span className="text-xl font-bold gradient-text">Order Tracking</span>
             </div>
+            <div className="flex items-center gap-2">
+              <Wifi className={`w-4 h-4 ${isConnected ? 'text-green-500' : 'text-gray-400'}`} />
+              <span className="text-xs text-gray-600">{isConnected ? 'Live' : 'Offline'}</span>
+            </div>
           </div>
         </div>
       </header>
