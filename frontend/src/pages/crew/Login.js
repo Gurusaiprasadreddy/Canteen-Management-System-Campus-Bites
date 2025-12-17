@@ -52,8 +52,28 @@ export default function CrewLogin() {
             Sign in with Google
           </Button>
 
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or for testing</span>
+              </div>
+            </div>
+
+            <Button
+              onClick={handleTestLogin}
+              variant="outline"
+              className="w-full mt-4 py-6 rounded-xl border-2"
+              data-testid="test-login-btn"
+            >
+              Quick Test Login
+            </Button>
+          </div>
+
           <p className="text-center text-sm text-gray-500 mt-6">
-            Only @amrita.edu emails are allowed
+            Any Gmail account is now supported
           </p>
         </div>
       </motion.div>
