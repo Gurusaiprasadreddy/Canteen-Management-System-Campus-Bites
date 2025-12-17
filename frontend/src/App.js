@@ -45,6 +45,7 @@ function App() {
           {/* Management Routes */}
           <Route path="/management/login" element={<ManagementLogin />} />
           <Route path="/management/dashboard" element={<ManagementDashboard />} />
+          <Route path="/management/menu" element={<MenuManagement />} />
           
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
