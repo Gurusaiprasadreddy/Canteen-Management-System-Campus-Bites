@@ -179,8 +179,8 @@ export default function CanteenView() {
             />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex gap-2 overflow-x-auto pb-2 flex-1">
+          <div className="space-y-4">
+            <div className="flex gap-2 overflow-x-auto pb-2">
               {categories.map((category) => (
                 <Button
                   key={category}
@@ -195,22 +195,40 @@ export default function CanteenView() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600 whitespace-nowrap">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-                data-testid="sort-select"
-              >
-                <option value="name">Name (A-Z)</option>
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="calories-low">Calories: Low to High</option>
-                <option value="calories-high">Calories: High to Low</option>
-                <option value="protein-high">Protein: High to Low</option>
-                <option value="carbs-low">Carbs: Low to High</option>
-              </select>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-sm text-gray-600 whitespace-nowrap">Dietary:</span>
+                <select
+                  value={selectedAllergyFilter}
+                  onChange={(e) => setSelectedAllergyFilter(e.target.value)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                  data-testid="allergy-filter"
+                >
+                  <option value="all">All Items</option>
+                  <option value="veg-only">Vegetarian Only</option>
+                  <option value="dairy-free">Dairy Free</option>
+                  <option value="gluten-free">Gluten Free</option>
+                  <option value="nut-free">Nut Free</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 flex-1">
+                <span className="text-sm text-gray-600 whitespace-nowrap">Sort by:</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                  data-testid="sort-select"
+                >
+                  <option value="name">Name (A-Z)</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="calories-low">Calories: Low to High</option>
+                  <option value="calories-high">Calories: High to Low</option>
+                  <option value="protein-high">Protein: High to Low</option>
+                  <option value="carbs-low">Carbs: Low to High</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
