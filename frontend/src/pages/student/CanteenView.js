@@ -303,9 +303,16 @@ export default function CanteenView() {
         </div>
 
         {filteredItems.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No items found</p>
-          </div>
+          <EmptyState
+            type="search"
+            onAction={() => {
+              setSearchQuery('');
+              setSelectedCategory('All');
+              setSelectedAllergyFilter('all');
+            }}
+            actionText="Clear Filters"
+            actionTestId="clear-filters-btn"
+          />
         )}
       </main>
     </div>
