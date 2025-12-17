@@ -88,7 +88,7 @@ export default function Landing() {
 
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }} className="mt-16 relative">
             <div className="rounded-3xl overflow-hidden shadow-2xl border-8 border-white">
-              <img src="https://images.unsplash.com/photo-1663086195364-fd8eca0f2c78?w=1200" alt="Delicious South Indian food" className="w-full h-[400px] object-cover" />
+              <img src="https://images.pexels.com/photos/8818732/pexels-photo-8818732.jpeg?auto=compress&cs=tinysrgb&w=1200" alt="Delicious Indian thali meal" className="w-full h-[400px] object-cover" />
             </div>
           </motion.div>
         </div>
