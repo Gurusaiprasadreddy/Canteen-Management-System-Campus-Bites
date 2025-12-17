@@ -24,11 +24,15 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# Razorpay client
-razorpay_client = razorpay.Client(auth=(
-    os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_key'),
-    os.environ.get('RAZORPAY_KEY_SECRET', 'razorpay_secret')
-))
+# Razorpay client - Use test mode
+RAZORPAY_ENABLED = False  # Set to True when you have real keys
+if RAZORPAY_ENABLED:
+    razorpay_client = razorpay.Client(auth=(
+        os.environ.get('RAZORPAY_KEY_ID', 'rzp_test_key'),
+        os.environ.get('RAZORPAY_KEY_SECRET', 'razorpay_secret')
+    ))
+else:
+    razorpay_client = None
 
 # Socket.IO setup
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
