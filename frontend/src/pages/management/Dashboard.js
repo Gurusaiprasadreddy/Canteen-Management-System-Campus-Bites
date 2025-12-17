@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, TrendingUp, DollarSign, ShoppingBag, Users, LogOut } from 'lucide-react';
+import { Utensils, TrendingUp, DollarSign, ShoppingBag, Users, LogOut, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/utils/api';
 import { getAuth, clearAuth } from '@/utils/auth';
