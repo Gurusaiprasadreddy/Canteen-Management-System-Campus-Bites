@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, Plus, Edit, Trash2, ArrowLeft, Loader2 } from 'lucide-react';
+import { Utensils, Plus, Edit, Trash2, ArrowLeft, Loader2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import api from '@/utils/api';
 import { getAuth } from '@/utils/auth';
 import { toast } from 'sonner';
@@ -18,6 +19,7 @@ export default function MenuManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCanteen, setSelectedCanteen] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [formData, setFormData] = useState({
     name: '',
     canteen_id: 'sopanam',
@@ -44,7 +46,7 @@ export default function MenuManagement() {
       return;
     }
     fetchData();
-  }, [user, navigate]);
+  }, [user?.user_id, navigate]);
 
   const fetchData = async () => {
     try {
@@ -53,7 +55,7 @@ export default function MenuManagement() {
         api.get('/menu/sopanam')
       ]);
       setCanteens(canteensRes.data);
-      
+
       // Fetch all canteen menus
       const allItems = [];
       for (const canteen of canteensRes.data) {
@@ -149,9 +151,15 @@ export default function MenuManagement() {
     }
   };
 
-  const filteredItems = selectedCanteen === 'all' 
-    ? menuItems 
+  let filteredItems = selectedCanteen === 'all'
+    ? menuItems
     : menuItems.filter(item => item.canteen_id === selectedCanteen);
+
+  if (selectedCategory !== 'all') {
+    filteredItems = filteredItems.filter(item => item.category === selectedCategory);
+  }
+
+  const categories = ['all', ...new Set(menuItems.map(item => item.category))];
 
   if (loading && !showAddModal) {
     return (
@@ -186,19 +194,34 @@ export default function MenuManagement() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <Label className="text-white mb-2 block">Filter by Canteen</Label>
-          <select
-            value={selectedCanteen}
-            onChange={(e) => setSelectedCanteen(e.target.value)}
-            className="px-4 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white"
-            data-testid="canteen-filter"
-          >
-            <option value="all">All Canteens</option>
-            {canteens.map(canteen => (
-              <option key={canteen.canteen_id} value={canteen.canteen_id}>{canteen.name}</option>
-            ))}
-          </select>
+        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <Label className="text-white mb-2 block">Filter by Canteen</Label>
+            <select
+              value={selectedCanteen}
+              onChange={(e) => setSelectedCanteen(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white"
+              data-testid="canteen-filter"
+            >
+              <option value="all">All Canteens</option>
+              {canteens.map(canteen => (
+                <option key={canteen.canteen_id} value={canteen.canteen_id}>{canteen.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="text-white mb-2 block">Filter by Category</Label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="w-full px-4 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white"
+              data-testid="category-filter"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -208,7 +231,7 @@ export default function MenuManagement() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="glass-dark rounded-2xl p-6"
+              className="glass-dark rounded-2xl p-6 border border-gray-700 hover:border-orange-500/50 transition-colors"
               data-testid={`menu-item-${item.item_id}`}
             >
               <div className="flex justify-between items-start mb-3">
@@ -223,20 +246,50 @@ export default function MenuManagement() {
 
               <div className="space-y-2 mb-4">
                 <p className="text-sm text-gray-400">Category: {item.category}</p>
-                <p className="text-sm text-gray-400">Stock: {item.stock_qty}</p>
-                <p className="text-sm text-gray-400">Calories: {item.nutrition.calories} kcal</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-400">Stock: {item.stock_qty}</p>
+                  {item.stock_qty < 20 && (
+                    <Badge variant="destructive" className="text-xs">
+                      <AlertTriangle className="w-3 h-3 mr-1" />
+                      Low Stock
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-sm text-gray-400">Calories: {item.nutrition?.calories || 0} kcal</p>
               </div>
 
-              <div className="flex gap-2">
+              {/* Stock Controls */}
+              <div className="flex gap-2 mb-3">
                 <Button
                   size="sm"
-                  variant={item.available ? 'default' : 'outline'}
-                  onClick={() => handleToggleAvailability(item.item_id, item.available)}
-                  className="flex-1"
-                  data-testid={`toggle-availability-${item.item_id}`}
+                  variant="outline"
+                  onClick={() => handleUpdateStock(item.item_id, Math.max(0, item.stock_qty - 10))}
+                  className="flex-1 text-xs"
                 >
-                  {item.available ? 'Available' : 'Disabled'}
+                  <TrendingDown className="w-3 h-3 mr-1" />
+                  -10
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleUpdateStock(item.item_id, item.stock_qty + 10)}
+                  className="flex-1 text-xs"
+                >
+                  <TrendingUp className="w-3 h-3 mr-1" />
+                  +10
+                </Button>
+              </div>
+
+              {/* Availability Toggle */}
+              <div className="flex items-center justify-between p-3 bg-gray-800 rounded-xl">
+                <span className="text-sm font-medium">
+                  {item.available ? '🟢 Available' : '🔴 Out of Stock'}
+                </span>
+                <Switch
+                  checked={item.available}
+                  onCheckedChange={() => handleToggleAvailability(item.item_id, item.available)}
+                  data-testid={`toggle-availability-${item.item_id}`}
+                />
               </div>
             </motion.div>
           ))}
@@ -262,12 +315,12 @@ export default function MenuManagement() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">Item Name</Label>
-                  <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="canteen">Canteen</Label>
-                  <select id="canteen" value={formData.canteen_id} onChange={(e) => setFormData({...formData, canteen_id: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
+                  <select id="canteen" value={formData.canteen_id} onChange={(e) => setFormData({ ...formData, canteen_id: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
                     {canteens.map(c => (
                       <option key={c.canteen_id} value={c.canteen_id}>{c.name}</option>
                     ))}
@@ -276,17 +329,17 @@ export default function MenuManagement() {
 
                 <div>
                   <Label htmlFor="price">Price (₹)</Label>
-                  <Input id="price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="category">Category</Label>
-                  <Input id="category" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="veg_type">Type</Label>
-                  <select id="veg_type" value={formData.veg_type} onChange={(e) => setFormData({...formData, veg_type: e.target.value})} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
+                  <select id="veg_type" value={formData.veg_type} onChange={(e) => setFormData({ ...formData, veg_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
                     <option value="veg">Vegetarian</option>
                     <option value="non-veg">Non-Vegetarian</option>
                   </select>
@@ -294,48 +347,48 @@ export default function MenuManagement() {
 
                 <div>
                   <Label htmlFor="stock_qty">Stock Quantity</Label>
-                  <Input id="stock_qty" type="number" value={formData.stock_qty} onChange={(e) => setFormData({...formData, stock_qty: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="stock_qty" type="number" value={formData.stock_qty} onChange={(e) => setFormData({ ...formData, stock_qty: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="calories">Calories</Label>
-                  <Input id="calories" type="number" value={formData.calories} onChange={(e) => setFormData({...formData, calories: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="calories" type="number" value={formData.calories} onChange={(e) => setFormData({ ...formData, calories: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="protein">Protein (g)</Label>
-                  <Input id="protein" type="number" step="0.1" value={formData.protein} onChange={(e) => setFormData({...formData, protein: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="protein" type="number" step="0.1" value={formData.protein} onChange={(e) => setFormData({ ...formData, protein: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="carbs">Carbs (g)</Label>
-                  <Input id="carbs" type="number" step="0.1" value={formData.carbs} onChange={(e) => setFormData({...formData, carbs: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="carbs" type="number" step="0.1" value={formData.carbs} onChange={(e) => setFormData({ ...formData, carbs: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="fat">Fat (g)</Label>
-                  <Input id="fat" type="number" step="0.1" value={formData.fat} onChange={(e) => setFormData({...formData, fat: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="fat" type="number" step="0.1" value={formData.fat} onChange={(e) => setFormData({ ...formData, fat: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="fiber">Fiber (g)</Label>
-                  <Input id="fiber" type="number" step="0.1" value={formData.fiber} onChange={(e) => setFormData({...formData, fiber: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="fiber" type="number" step="0.1" value={formData.fiber} onChange={(e) => setFormData({ ...formData, fiber: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
 
                 <div>
                   <Label htmlFor="sodium">Sodium (mg)</Label>
-                  <Input id="sodium" type="number" step="0.1" value={formData.sodium} onChange={(e) => setFormData({...formData, sodium: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                  <Input id="sodium" type="number" step="0.1" value={formData.sodium} onChange={(e) => setFormData({ ...formData, sodium: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
                 </div>
               </div>
 
               <div>
                 <Label htmlFor="ingredients">Ingredients</Label>
-                <Input id="ingredients" value={formData.ingredients} onChange={(e) => setFormData({...formData, ingredients: e.target.value})} required className="bg-gray-700 text-white border-gray-600" />
+                <Input id="ingredients" value={formData.ingredients} onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
               </div>
 
               <div>
                 <Label htmlFor="allergens">Allergens</Label>
-                <Input id="allergens" value={formData.allergens} onChange={(e) => setFormData({...formData, allergens: e.target.value})} placeholder="e.g., Dairy, Gluten" className="bg-gray-700 text-white border-gray-600" />
+                <Input id="allergens" value={formData.allergens} onChange={(e) => setFormData({ ...formData, allergens: e.target.value })} placeholder="e.g., Dairy, Gluten" className="bg-gray-700 text-white border-gray-600" />
               </div>
 
               <div className="flex gap-4 mt-6">

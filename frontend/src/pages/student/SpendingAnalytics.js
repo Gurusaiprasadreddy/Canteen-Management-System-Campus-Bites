@@ -20,7 +20,7 @@ export default function SpendingAnalytics() {
       return;
     }
     fetchData();
-  }, [user, navigate]);
+  }, [user?.user_id, navigate]);
 
   const fetchData = async () => {
     try {

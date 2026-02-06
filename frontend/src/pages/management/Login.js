@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, Loader2, LogIn } from 'lucide-react';
+import { Utensils, Loader2, LogIn, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +24,7 @@ export default function ManagementLogin() {
       toast.success('Login successful!');
       navigate('/management/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error('Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,26 @@ export default function ManagementLogin() {
           </div>
 
           <div className="mt-6 pt-6 border-t border-white/20 text-center">
-            <Link to="/" className="text-sm text-gray-300 hover:text-white" data-testid="back-home-link">Back to Home</Link>
+            <p className="text-sm text-gray-300 mb-3">
+              Don't have an account?{' '}
+              <button
+                onClick={() => navigate('/management/signup')}
+                className="text-orange-400 hover:text-orange-300 font-medium"
+              >
+                Sign Up
+              </button>
+            </p>
+          </div>
+
+          <div className="mt-4 border-t border-white/20 pt-4">
+            <Button
+              onClick={() => navigate('/')}
+              variant="ghost"
+              className="w-full text-gray-300 hover:text-white hover:bg-white/10"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Go Back to Home
+            </Button>
           </div>
         </div>
       </motion.div>

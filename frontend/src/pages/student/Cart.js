@@ -5,7 +5,7 @@ import { ShoppingCart, Trash2, Plus, Minus, ArrowLeft, Loader2 } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import api from '@/utils/api';
 import { getAuth } from '@/utils/auth';
-import { getCart, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal } from '@/utils/cart';
+import { getCart, updateCartItemQuantity, removeFromCart, clearCart, getCartTotal, addToCart } from '@/utils/cart';
 import { toast } from 'sonner';
 import SuccessCelebration from '@/components/SuccessCelebration';
 import EmptyState from '@/components/EmptyState';
@@ -24,7 +24,7 @@ export default function Cart() {
       return;
     }
     setCart(getCart());
-  }, [user, navigate]);
+  }, [user?.user_id, navigate]);
 
   const handleUpdateQuantity = (itemId, newQuantity) => {
     const updatedCart = updateCartItemQuantity(itemId, newQuantity);
@@ -130,10 +130,52 @@ export default function Cart() {
         razorpay.open();
       }
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create order');
+      console.error("Order creation failed:", error);
+      let errorMessage = 'Failed to create order';
+
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (Array.isArray(detail)) {
+          // Pydantic validation error
+          errorMessage = detail.map(err => `${err.loc.join('.')}: ${err.msg}`).join(', ');
+        } else if (typeof detail === 'object') {
+          errorMessage = JSON.stringify(detail);
+        } else {
+          errorMessage = detail;
+        }
+      }
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
+  };
+
+  /* AI Recommendations */
+  const [recommendations, setRecommendations] = useState([]);
+
+  useEffect(() => {
+    if (cart.length > 0) {
+      fetchRecommendations();
+    }
+  }, [cart]);
+
+  const fetchRecommendations = async () => {
+    try {
+      const response = await api.post('/ai/recommendations/collaborative', {
+        current_items: cart.map(item => item.name),
+        canteen_id: cart[0]?.canteen_id
+      });
+      setRecommendations(response.data.recommendations);
+    } catch (error) {
+      console.error("Failed to fetch recommendations", error);
+    }
+  };
+
+  const handleAddRecommendation = (item) => {
+    addToCart(item, 1);
+    toast.success(`${item.name} added to cart`);
+    setCart(getCart());
   };
 
   const total = getCartTotal();
@@ -234,6 +276,35 @@ export default function Cart() {
               </div>
             </motion.div>
           ))}
+        </div>
+
+        <div className="mt-8">
+          {recommendations.length > 0 && (
+            <div className="bg-white rounded-2xl p-6 shadow-lg border border-orange-100">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <span className="text-orange-500">✨</span> You might also like
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {recommendations.map(item => (
+                  <div key={item.item_id} className="border rounded-xl p-4 flex justify-between items-center group hover:border-orange-200 transition-colors">
+                    <div>
+                      <p className="font-bold text-sm">{item.name}</p>
+                      <p className="text-xs text-gray-500">{item.nutrition?.calories} kcal</p>
+                      <p className="text-orange-600 font-bold text-sm">₹{item.price}</p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="rounded-full hover:bg-orange-50 text-orange-600"
+                      onClick={() => handleAddRecommendation(item)}
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-8 bg-white rounded-2xl p-6 shadow-lg border border-orange-100">

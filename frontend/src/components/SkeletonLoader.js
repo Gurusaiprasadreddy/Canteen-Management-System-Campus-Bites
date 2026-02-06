@@ -2,18 +2,18 @@ import { motion } from 'framer-motion';
 
 export function MenuItemSkeleton() {
   return (
-    <div className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 p-6">
-      <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 rounded-2xl animate-pulse mb-4" />
-      
-      <div className="space-y-3">
+    <div className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100">
+      <div className="h-48 bg-gray-200 animate-pulse" />
+
+      <div className="p-6 space-y-3">
         <div className="h-6 bg-gray-200 rounded-lg animate-pulse w-3/4" />
         <div className="h-4 bg-gray-200 rounded-lg animate-pulse w-1/2" />
         <div className="flex gap-2 mt-4">
-          <div className="h-8 bg-gray-200 rounded-full animate-pulse w-16" />
-          <div className="h-8 bg-gray-200 rounded-full animate-pulse w-16" />
-          <div className="h-8 bg-gray-200 rounded-full animate-pulse w-16" />
+          <div className="h-6 bg-gray-200 rounded-full animate-pulse w-16" />
+          <div className="h-6 bg-gray-200 rounded-full animate-pulse w-16" />
+          <div className="h-6 bg-gray-200 rounded-full animate-pulse w-16" />
         </div>
-        <div className="h-12 bg-gray-200 rounded-xl animate-pulse mt-4" />
+        <div className="h-10 bg-gray-200 rounded-xl animate-pulse mt-4" />
       </div>
     </div>
   );

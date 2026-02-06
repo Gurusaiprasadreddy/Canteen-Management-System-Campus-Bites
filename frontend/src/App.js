@@ -14,8 +14,10 @@ import OrderHistory from "@/pages/student/OrderHistory";
 import SpendingAnalytics from "@/pages/student/SpendingAnalytics";
 import AIRecommendations from "@/pages/student/AIRecommendations";
 import CrewLogin from "@/pages/crew/Login";
+import CrewSignup from "@/pages/crew/Signup";
 import CrewDashboard from "@/pages/crew/Dashboard";
 import ManagementLogin from "@/pages/management/Login";
+import ManagementSignup from "@/pages/management/Signup";
 import ManagementDashboard from "@/pages/management/Dashboard";
 import MenuManagement from "@/pages/management/MenuManagement";
 
@@ -26,7 +28,7 @@ function App() {
         <Routes>
           {/* Landing Page */}
           <Route path="/" element={<Landing />} />
-          
+
           {/* Student Routes */}
           <Route path="/student/login" element={<StudentLogin />} />
           <Route path="/student/register" element={<StudentRegister />} />
@@ -37,16 +39,18 @@ function App() {
           <Route path="/student/orders/history" element={<OrderHistory />} />
           <Route path="/student/spending" element={<SpendingAnalytics />} />
           <Route path="/student/ai-recommendations" element={<AIRecommendations />} />
-          
+
           {/* Crew Routes */}
           <Route path="/crew/login" element={<CrewLogin />} />
+          <Route path="/crew/signup" element={<CrewSignup />} />
           <Route path="/crew/dashboard" element={<CrewDashboard />} />
-          
+
           {/* Management Routes */}
           <Route path="/management/login" element={<ManagementLogin />} />
+          <Route path="/management/signup" element={<ManagementSignup />} />
           <Route path="/management/dashboard" element={<ManagementDashboard />} />
           <Route path="/management/menu" element={<MenuManagement />} />
-          
+
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

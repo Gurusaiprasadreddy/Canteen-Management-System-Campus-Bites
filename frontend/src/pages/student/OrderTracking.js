@@ -25,7 +25,7 @@ export default function OrderTracking() {
 
     // Initialize WebSocket
     const socket = getSocket();
-    
+
     socket.on('connect', () => {
       setIsConnected(true);
       joinRoom(user.user_id);
@@ -46,7 +46,7 @@ export default function OrderTracking() {
       leaveRoom(user.user_id);
       socket.off('order_update');
     };
-  }, [user, navigate]);
+  }, [user?.user_id, navigate]);
 
   const fetchOrders = async () => {
     try {

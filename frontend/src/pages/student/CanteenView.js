@@ -27,35 +27,52 @@ export default function CanteenView() {
   const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
+    let mounted = true;
+    const controller = new AbortController();
+
     if (!user) {
       navigate('/student/login');
       return;
     }
+
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [canteenRes, menuRes] = await Promise.all([
+          api.get('/canteens', { signal: controller.signal }),
+          api.get(`/menu/${canteenId}`, { signal: controller.signal })
+        ]);
+
+        if (mounted) {
+          const currentCanteen = canteenRes.data.find(c => c.canteen_id === canteenId);
+          setCanteen(currentCanteen);
+          setMenuItems(menuRes.data.filter(item => item.available));
+          setFilteredItems(menuRes.data.filter(item => item.available));
+        }
+      } catch (error) {
+        if (mounted && error.name !== 'CanceledError') {
+          console.error("Error fetching data:", error);
+          toast.error('Failed to load menu');
+        }
+      } finally {
+        if (mounted) {
+          setLoading(false);
+        }
+      }
+    };
+
     fetchData();
     setCartCount(getCartItemCount());
-  }, [canteenId, user, navigate]);
+
+    return () => {
+      mounted = false;
+      controller.abort();
+    };
+  }, [canteenId, user?.user_id, navigate]);
 
   useEffect(() => {
     filterItems();
   }, [searchQuery, selectedCategory, sortBy, selectedAllergyFilter, menuItems]);
-
-  const fetchData = async () => {
-    try {
-      const [canteenRes, menuRes] = await Promise.all([
-        api.get('/canteens'),
-        api.get(`/menu/${canteenId}`)
-      ]);
-      
-      const currentCanteen = canteenRes.data.find(c => c.canteen_id === canteenId);
-      setCanteen(currentCanteen);
-      setMenuItems(menuRes.data.filter(item => item.available));
-      setFilteredItems(menuRes.data.filter(item => item.available));
-    } catch (error) {
-      toast.error('Failed to load menu');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const filterItems = () => {
     let filtered = menuItems;
@@ -84,6 +101,8 @@ export default function CanteenView() {
             return !allergens.includes('nut');
           case 'veg-only':
             return item.veg_type === 'veg';
+          case 'non-veg-only':
+            return item.veg_type === 'non-veg';
           default:
             return true;
         }
@@ -122,25 +141,16 @@ export default function CanteenView() {
     toast.success(`${item.name} added to cart!`);
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50">
-        <header className="sticky top-0 z-50 backdrop-blur-md bg-white/80 border-b border-orange-100">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
-              <div className="h-10 w-10 bg-gray-200 rounded-full animate-pulse" />
-            </div>
-          </div>
-        </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-4" />
-          <div className="h-4 w-64 bg-gray-200 rounded animate-pulse mb-8" />
-          <SkeletonLoader type="menu" count={6} />
-        </main>
-      </div>
-    );
-  }
+  const getOptimizedImageUrl = (url) => {
+    if (!url) return null;
+    if (url.includes('unsplash.com')) {
+      // Check if it already has params
+      return url.includes('?')
+        ? `${url}&w=500&q=80&auto=format`
+        : `${url}?w=500&q=80&auto=format`;
+    }
+    return url;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-orange-50">
@@ -154,13 +164,17 @@ export default function CanteenView() {
               </Button>
               <div className="flex items-center gap-2">
                 <Utensils className="w-6 h-6 text-orange-600" />
-                <span className="text-xl font-bold gradient-text">{canteen?.name}</span>
+                {loading ? (
+                  <div className="h-6 w-32 bg-gray-200 rounded animate-pulse" />
+                ) : (
+                  <span className="text-xl font-bold gradient-text">{canteen?.name}</span>
+                )}
               </div>
             </div>
             <Link to="/student/cart" className="relative" data-testid="cart-link">
               <Button variant="outline" size="sm" className="rounded-full">
                 <ShoppingCart className="w-4 h-4" />
-                {cartCount > 0 && (
+                {!loading && cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {cartCount}
                   </span>
@@ -172,144 +186,181 @@ export default function CanteenView() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2 gradient-text">{canteen?.name}</h1>
-          <p className="text-gray-600">{canteen?.description}</p>
-        </div>
+        {loading ? (
+          <>
+            {/* Header Skeleton */}
+            <div className="mb-8">
+              <div className="h-10 w-64 bg-gray-200 rounded animate-pulse mb-3" />
+              <div className="h-4 w-96 bg-gray-200 rounded animate-pulse" />
+            </div>
 
-        <div className="mb-8 space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <Input
-              type="text"
-              placeholder="Search by name or ingredients..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 rounded-xl border-gray-200"
-              data-testid="search-input"
-            />
-          </div>
+            {/* Controls Skeleton */}
+            <div className="mb-8 space-y-4">
+              <div className="h-10 w-full bg-gray-200 rounded-xl animate-pulse" />
+              <div className="flex gap-2 pb-2">
+                <div className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+                <div className="h-8 w-20 bg-gray-200 rounded-full animate-pulse" />
+              </div>
+            </div>
 
-          <div className="space-y-4">
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {categories.map((category) => (
-                <Button
-                  key={category}
-                  variant={selectedCategory === category ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedCategory(category)}
-                  className="rounded-full whitespace-nowrap"
-                  data-testid={`category-${category}`}
+            {/* Menu Items Skeleton */}
+            <SkeletonLoader type="menu" count={6} />
+          </>
+        ) : (
+          <>
+            <div className="mb-8">
+              <h1 className="text-4xl font-bold mb-2 gradient-text">{canteen?.name}</h1>
+              <p className="text-gray-600">{canteen?.description}</p>
+            </div>
+
+            <div className="mb-8 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <Input
+                  type="text"
+                  placeholder="Search by name or ingredients..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 rounded-xl border-gray-200"
+                  data-testid="search-input"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-2 overflow-x-auto pb-2">
+                  {categories.map((category) => (
+                    <Button
+                      key={category}
+                      variant={selectedCategory === category ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedCategory(category)}
+                      className="rounded-full whitespace-nowrap"
+                      data-testid={`category-${category}`}
+                    >
+                      {category}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">Dietary:</span>
+                    <select
+                      value={selectedAllergyFilter}
+                      onChange={(e) => setSelectedAllergyFilter(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                      data-testid="allergy-filter"
+                    >
+                      <option value="all">All Items</option>
+                      <option value="veg-only">Vegetarian Only</option>
+                      <option value="non-veg-only">Non-Vegetarian Only</option>
+                      <option value="dairy-free">Dairy Free</option>
+                      <option value="gluten-free">Gluten Free</option>
+                      <option value="nut-free">Nut Free</option>
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-sm text-gray-600 whitespace-nowrap">Sort by:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value)}
+                      className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+                      data-testid="sort-select"
+                    >
+                      <option value="name">Name (A-Z)</option>
+                      <option value="price-low">Price: Low to High</option>
+                      <option value="price-high">Price: High to Low</option>
+                      <option value="calories-low">Calories: Low to High</option>
+                      <option value="calories-high">Calories: High to Low</option>
+                      <option value="protein-high">Protein: High to Low</option>
+                      <option value="carbs-low">Carbs: Low to High</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredItems.map((item) => (
+                <div
+                  key={item.item_id}
+                  className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-200"
+                  data-testid={`menu-item-${item.item_id}`}
                 >
-                  {category}
-                </Button>
+                  <div className="h-48 overflow-hidden bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center relative group">
+                    {item.image_url ? (
+                      <img
+                        src={getOptimizedImageUrl(item.image_url)}
+                        alt={item.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                      />
+                    ) : null}
+                    <div className={`absolute inset-0 flex items-center justify-center bg-orange-100 ${item.image_url ? 'hidden' : 'flex'}`}>
+                      <Utensils className="w-20 h-20 text-orange-300" />
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">{item.name}</h3>
+                        <Badge variant={item.veg_type === 'veg' ? 'secondary' : 'destructive'} className="text-xs">
+                          {item.veg_type === 'veg' ? 'Veg' : 'Non-Veg'}
+                        </Badge>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-orange-600">₹{item.price}</p>
+                        <p className="text-xs text-gray-500">{item.nutrition.calories} kcal</p>
+                      </div>
+                    </div>
+
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.ingredients}</p>
+
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      <span className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-full">
+                        P: {item.nutrition.protein}g
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
+                        C: {item.nutrition.carbs}g
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full">
+                        F: {item.nutrition.fat}g
+                      </span>
+                      <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full">
+                        Fiber: {item.nutrition.fiber}g
+                      </span>
+                    </div>
+
+                    <Button
+                      onClick={() => handleAddToCart(item)}
+                      className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+                      data-testid={`add-to-cart-${item.item_id}`}
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add to Cart
+                    </Button>
+                  </div>
+                </div>
               ))}
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex items-center gap-2 flex-1">
-                <span className="text-sm text-gray-600 whitespace-nowrap">Dietary:</span>
-                <select
-                  value={selectedAllergyFilter}
-                  onChange={(e) => setSelectedAllergyFilter(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-                  data-testid="allergy-filter"
-                >
-                  <option value="all">All Items</option>
-                  <option value="veg-only">Vegetarian Only</option>
-                  <option value="dairy-free">Dairy Free</option>
-                  <option value="gluten-free">Gluten Free</option>
-                  <option value="nut-free">Nut Free</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2 flex-1">
-                <span className="text-sm text-gray-600 whitespace-nowrap">Sort by:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="flex-1 px-4 py-2 rounded-xl border border-gray-200 bg-white text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-                  data-testid="sort-select"
-                >
-                  <option value="name">Name (A-Z)</option>
-                  <option value="price-low">Price: Low to High</option>
-                  <option value="price-high">Price: High to Low</option>
-                  <option value="calories-low">Calories: Low to High</option>
-                  <option value="calories-high">Calories: High to Low</option>
-                  <option value="protein-high">Protein: High to Low</option>
-                  <option value="carbs-low">Carbs: Low to High</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div
-              key={item.item_id}
-              className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-200"
-              data-testid={`menu-item-${item.item_id}`}
-            >
-              <div className="h-48 overflow-hidden bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
-                <Utensils className="w-20 h-20 text-orange-300" />
-              </div>
-
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-3">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{item.name}</h3>
-                    <Badge variant={item.veg_type === 'veg' ? 'secondary' : 'destructive'} className="text-xs">
-                      {item.veg_type === 'veg' ? 'Veg' : 'Non-Veg'}
-                    </Badge>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-2xl font-bold text-orange-600">₹{item.price}</p>
-                    <p className="text-xs text-gray-500">{item.nutrition.calories} kcal</p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.ingredients}</p>
-
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <span className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-full">
-                    P: {item.nutrition.protein}g
-                  </span>
-                  <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
-                    C: {item.nutrition.carbs}g
-                  </span>
-                  <span className="text-xs px-2 py-1 bg-amber-50 text-amber-700 rounded-full">
-                    F: {item.nutrition.fat}g
-                  </span>
-                  <span className="text-xs px-2 py-1 bg-green-50 text-green-700 rounded-full">
-                    Fiber: {item.nutrition.fiber}g
-                  </span>
-                </div>
-
-                <Button
-                  onClick={() => handleAddToCart(item)}
-                  className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
-                  data-testid={`add-to-cart-${item.item_id}`}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add to Cart
-                </Button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredItems.length === 0 && (
-          <EmptyState
-            type="search"
-            onAction={() => {
-              setSearchQuery('');
-              setSelectedCategory('All');
-              setSelectedAllergyFilter('all');
-            }}
-            actionText="Clear Filters"
-            actionTestId="clear-filters-btn"
-          />
+            {filteredItems.length === 0 && (
+              <EmptyState
+                type="search"
+                onAction={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('All');
+                  setSelectedAllergyFilter('all');
+                }}
+                actionText="Clear Filters"
+                actionTestId="clear-filters-btn"
+              />
+            )}
+          </>
         )}
       </main>
     </div>

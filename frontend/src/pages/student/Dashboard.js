@@ -22,7 +22,7 @@ export default function StudentDashboard() {
     }
     fetchCanteens();
     setCartCount(getCartItemCount());
-  }, [user, navigate]);
+  }, [user?.user_id, navigate]);
 
   const fetchCanteens = async () => {
     try {
@@ -158,25 +158,26 @@ export default function StudentDashboard() {
                 transition={{ delay: index * 0.1 }}
                 data-testid={`canteen-card-${canteen.canteen_id}`}
               >
-                <Link to={`/student/canteen/${canteen.canteen_id}`}>
-                  <div className="bg-white rounded-3xl overflow-hidden shadow-xl border border-orange-100 hover:shadow-2xl card-hover">
-                    <div className="h-48 overflow-hidden">
-                      <img
-                        src={canteen.image_url}
-                        alt={canteen.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-6">
-                      <h3 className="text-2xl font-bold mb-2 text-gray-900">{canteen.name}</h3>
-                      <p className="text-gray-600 mb-4">{canteen.description}</p>
-                      <div className="flex items-center gap-2 text-sm text-orange-600">
-                        <Clock className="w-4 h-4" />
-                        <span>{canteen.operating_hours}</span>
-                      </div>
+                <div
+                  onClick={() => navigate(`/student/canteen/${canteen.canteen_id}`)}
+                  className="bg-white rounded-3xl overflow-hidden shadow-xl border border-orange-100 hover:shadow-2xl card-hover cursor-pointer"
+                >
+                  <div className="h-48 overflow-hidden">
+                    <img
+                      src={canteen.image_url}
+                      alt={canteen.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-6">
+                    <h3 className="text-2xl font-bold mb-2 text-gray-900">{canteen.name}</h3>
+                    <p className="text-gray-600 mb-4">{canteen.description}</p>
+                    <div className="flex items-center gap-2 text-sm text-orange-600">
+                      <Clock className="w-4 h-4" />
+                      <span>{canteen.operating_hours}</span>
                     </div>
                   </div>
-                </Link>
+                </div>
               </motion.div>
             ))}
           </div>

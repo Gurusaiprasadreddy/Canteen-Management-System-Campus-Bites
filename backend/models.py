@@ -26,6 +26,10 @@ class StudentLogin(BaseModel):
     roll_number: str
     password: str
 
+class CrewLogin(BaseModel):
+    email: EmailStr
+    password: str
+
 class ManagementLogin(BaseModel):
     email: EmailStr
     password: str
@@ -105,7 +109,7 @@ class Order(BaseModel):
     student_id: str
     items: List[OrderItem]
     canteen_id: str
-    token_number: str
+    token_number: int
     status: str  # "PENDING_PAYMENT", "PREPARING", "READY", "COMPLETED", "CANCELLED"
     payment_id: Optional[str] = None
     razorpay_order_id: Optional[str] = None
@@ -120,8 +124,15 @@ class OrderCreate(BaseModel):
     canteen_id: str
     total_amount: float
 
+class OrderBatchDelete(BaseModel):
+    order_ids: List[str]
+
 class OrderStatusUpdate(BaseModel):
     status: str
+
+class PaymentVerification(BaseModel):
+    payment_id: str
+    signature: str
 
 # AI Recommendation Models
 class AIRecommendation(BaseModel):
@@ -141,7 +152,12 @@ class GymGoalInput(BaseModel):
     goal: str  # "weight_loss", "muscle_gain", "maintenance"
     current_weight: Optional[float] = None
     target_weight: Optional[float] = None
+    protein_goal: Optional[float] = None
     dietary_preference: Optional[str] = None
+    
+class RecommendationInput(BaseModel):
+    current_items: List[str] = [] # List of item names
+    canteen_id: Optional[str] = None
 
 # Spending Analytics Model
 class SpendingAnalytics(BaseModel):

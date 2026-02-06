@@ -24,7 +24,7 @@ export default function StudentLogin() {
       toast.success('Login successful!');
       navigate('/student/dashboard');
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Login failed');
+      toast.error('Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
