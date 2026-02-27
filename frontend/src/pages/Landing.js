@@ -1,9 +1,17 @@
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Utensils, Sparkles, TrendingUp, Clock, Shield, Smartphone } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Utensils, Sparkles, TrendingUp, Clock, Shield, Smartphone, X, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Landing() {
+  const [showDevelopers, setShowDevelopers] = useState(false);
+
+  const developers = [
+    { name: "N. Surya Tejeswar", image: "http://localhost:8001/static/Team Members/Surya.jpg", link: "https://surya-8143.github.io/Portfolio/" },
+    { name: "P.M Radha Krishna", image: "http://localhost:8001/static/Team Members/Radha Krishna.jpg" },
+    { name: "B. Guru Sai Prasad", image: "http://localhost:8001/static/Team Members/Guru.jpg" }
+  ];
   const features = [
     {
       icon: <Sparkles className="w-8 h-8" />,
@@ -47,16 +55,86 @@ export default function Landing() {
               <span className="text-2xl font-bold gradient-text">Campus Bites</span>
             </div>
             <div className="flex gap-3">
-              <Button variant="outline" asChild className="rounded-full border-orange-200 hover:border-orange-400">
-                <Link to="/crew/login">Crew Login</Link>
+              <Button variant="ghost" onClick={() => setShowDevelopers(true)} className="rounded-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium hidden sm:flex items-center gap-2">
+                <Code2 className="w-4 h-4" />
+                Developers
               </Button>
               <Button asChild className="rounded-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-lg shadow-orange-500/20">
-                <Link to="/student/login">Get Started</Link>
+                <Link to="/login?tab=student">Get Started</Link>
               </Button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Developers Modal */}
+      <AnimatePresence>
+        {showDevelopers && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 sm:p-10 w-full max-w-4xl shadow-2xl relative"
+            >
+              <button
+                onClick={() => setShowDevelopers(false)}
+                className="absolute top-6 right-6 p-2 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-500" />
+              </button>
+
+              <div className="text-center mb-10">
+                <h2 className="text-3xl font-bold text-gray-900 mb-2">Meet The Developers</h2>
+                <div className="h-1 w-20 bg-orange-500 mx-auto rounded-full"></div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {developers.map((dev, idx) => (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    key={idx}
+                    className="flex flex-col items-center text-center group"
+                  >
+                    <div className="relative mb-6">
+                      {dev.link ? (
+                        <a href={dev.link} target="_blank" rel="noopener noreferrer" className="block relative cursor-pointer">
+                          <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-full blur-xl opacity-0 hover:opacity-40 transition-opacity duration-300"></div>
+                          <img
+                            src={dev.image}
+                            alt={dev.name}
+                            className="w-40 h-40 sm:w-48 sm:h-48 rounded-full object-cover border-4 border-white shadow-xl relative z-10 transition-transform duration-300 hover:scale-105"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `https://ui-avatars.com/api/?name=${dev.name.replace(' ', '+')}&background=FFDBBB&color=EA580C&size=200`;
+                            }}
+                          />
+                        </a>
+                      ) : (
+                        <div className="block relative">
+                          <div className="absolute inset-0 bg-gradient-to-br from-orange-400 to-amber-400 rounded-full blur-xl opacity-0 group-hover:opacity-40 transition-opacity duration-300"></div>
+                          <img
+                            src={dev.image}
+                            alt={dev.name}
+                            className="w-40 h-40 sm:w-48 sm:h-48 rounded-full object-cover border-4 border-white shadow-xl relative z-10 transition-transform duration-300 group-hover:scale-105"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `https://ui-avatars.com/api/?name=${dev.name.replace(' ', '+')}&background=FFDBBB&color=EA580C&size=200`;
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <h3 className="text-xl font-bold text-gray-900 leading-tight">{dev.name}</h3>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
@@ -78,10 +156,7 @@ export default function Landing() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <Button size="lg" asChild className="rounded-full px-8 py-6 text-lg bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 shadow-2xl shadow-orange-500/30 btn-ripple" data-testid="hero-order-now-btn">
-                <Link to="/student/register">Order Now →</Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="rounded-full px-8 py-6 text-lg border-2 border-orange-300 hover:border-orange-500 hover:bg-orange-50" data-testid="hero-management-login-btn">
-                <Link to="/management/login">Management Login</Link>
+                <Link to="/login?tab=student">Order Now →</Link>
               </Button>
             </div>
           </motion.div>
