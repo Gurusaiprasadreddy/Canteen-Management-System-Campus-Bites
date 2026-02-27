@@ -143,12 +143,6 @@ export default function CanteenView() {
 
   const getOptimizedImageUrl = (url) => {
     if (!url) return null;
-    if (url.includes('unsplash.com')) {
-      // Check if it already has params
-      return url.includes('?')
-        ? `${url}&w=500&q=80&auto=format`
-        : `${url}?w=500&q=80&auto=format`;
-    }
     return url;
   };
 

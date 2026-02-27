@@ -16,11 +16,15 @@ class User(BaseModel):
     picture: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class SendOtpRequest(BaseModel):
+    email: EmailStr
+
 class StudentRegister(BaseModel):
     roll_number: str
     password: str
     name: str
-    email: Optional[EmailStr] = None
+    email: EmailStr
+    otp: str
 
 class StudentLogin(BaseModel):
     roll_number: str

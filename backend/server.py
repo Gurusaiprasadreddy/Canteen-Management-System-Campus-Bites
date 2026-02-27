@@ -5,6 +5,7 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Cookie, Header, Response, Body
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -40,6 +41,10 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 
 # Create the main app
 app = FastAPI()
+
+# Mount static folder for local images
+if os.path.isdir(os.path.join(ROOT_DIR, "static")):
+    app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), name="static")
 
 @app.on_event("startup")
 async def startup_db_client():
@@ -91,10 +96,34 @@ async def add_cache_control_header(request, call_next):
 # ============================================
 # AUTH ENDPOINTS
 # ============================================
+import random
+
+otp_store = {}
+
+@api_router.post("/auth/student/send-otp")
+async def send_otp(request: SendOtpRequest):
+    """Send OTP to student terminal"""
+    existing = await db.users.find_one({"email": request.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+        
+    otp = str(random.randint(100000, 999999))
+    otp_store[request.email] = otp
+    
+    print("\n" + "="*50)
+    print(f"  🚨 OTP for {request.email} is: {otp} 🚨  ")
+    print("="*50 + "\n")
+    
+    return {"message": "OTP sent successfully to terminal"}
 
 @api_router.post("/auth/student/register")
 async def student_register(data: StudentRegister):
     """Register a new student"""
+    # Verify OTP
+    stored_otp = otp_store.get(data.email)
+    if not stored_otp or stored_otp != data.otp:
+        raise HTTPException(status_code=400, detail="Invalid or expired OTP")
+        
     # Check if roll number already exists
     existing = await db.users.find_one({"roll_number": data.roll_number}, {"_id": 0})
     if existing:
@@ -113,6 +142,9 @@ async def student_register(data: StudentRegister):
     user_dict['created_at'] = user_dict['created_at'].isoformat()
     
     await db.users.insert_one(user_dict)
+    
+    # Clear the used OTP
+    otp_store.pop(data.email, None)
     
     # Create JWT token
     token = create_jwt_token(user.user_id, user.role)
@@ -402,11 +434,52 @@ async def get_menu_item(item_id: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return item
 
+import httpx
+import tempfile
+import re
+
+def find_local_image_for_food(food_name: str) -> Optional[str]:
+    """Search the static/food_images directory for an exact matching image."""
+    base_dir = os.path.join(ROOT_DIR, "static", "food_images")
+    if not os.path.exists(base_dir):
+        return None
+        
+    # Example item: "Masala Dosa" -> check for "masala dosa.jpg" or "masaladosa.jpg"
+    term = food_name.lower().strip()
+    
+    # Check for direct match
+    direct_match = os.path.join(base_dir, f"{term}.jpg")
+    if os.path.exists(direct_match):
+        return f"http://localhost:8001/static/food_images/{term}.jpg"
+        
+    # Check for match in all listed files
+    try:
+        files = [f for f in os.listdir(base_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
+        for f in files:
+            # removing extension for comparison
+            file_base = os.path.splitext(f)[0].lower()
+            if term == file_base or term in file_base or file_base in term:
+                return f"http://localhost:8001/static/food_images/{f}"
+    except Exception as e:
+        logging.error(f"Error reading local static images: {e}")
+        
+    return None
+
 @api_router.post("/menu", response_model=MenuItem)
 async def create_menu_item(item: MenuItemCreate, user: dict = Depends(get_current_user)):
     """Create new menu item (Management only)"""
     if user['role'] != 'management':
         raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    # 🔥 Fetch image dynamically from Local Dataset if not provided
+    if not item.image_url or item.image_url == "":
+        local_img = find_local_image_for_food(item.name)
+        if local_img:
+            item.image_url = local_img
+        else:
+            # Fallback to a placeholder silhouette color if not found
+            fallback_color = random.choice(["FF5733", "33FF57", "3357FF", "F333FF", "FF33A1", "33FFF0"])
+            item.image_url = f"https://ui-avatars.com/api/?name={item.name}&background={fallback_color}&color=fff&size=500"
     
     menu_item = MenuItem(**item.model_dump())
     item_dict = menu_item.model_dump()

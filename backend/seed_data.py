@@ -6,6 +6,8 @@ from pathlib import Path
 from datetime import datetime
 import uuid
 from auth_utils import hash_password
+import requests
+import random
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -22,28 +24,30 @@ async def seed_database():
     await db.menu_items.delete_many({})
     await db.users.delete_many({"role": "management"})
     
-    # Seed Canteens
+    print("📸 Generating dynamic unique images for all menu items...")
+    
+    # Seed Canteens (Explicit Unsplash IDs)
     canteens = [
         {
             "canteen_id": "sopanam",
             "name": "Sopanam Canteen",
             "description": "South Indian breakfast & snacks specialist",
             "operating_hours": "7:00 AM - 10:00 PM",
-            "image_url": "/assets/sopanam.png"
+            "image_url": "https://images.unsplash.com/photo-1585647313622-77119ffb892a?w=800&q=80"
         },
         {
             "canteen_id": "mba",
             "name": "MBA Canteen",
             "description": "North Indian meals & premium dining",
             "operating_hours": "8:00 AM - 9:00 PM",
-            "image_url": "/assets/mba.png"
+            "image_url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80"
         },
         {
             "canteen_id": "samudra",
             "name": "Samudra Canteen",
             "description": "Traditional meals & health options",
             "operating_hours": "7:30 AM - 9:30 PM",
-            "image_url": "https://images.unsplash.com/photo-1613478223719-2ab802602423"
+            "image_url": "https://images.unsplash.com/photo-1414235077428-338988a2e8c0?w=800&q=80"
         }
     ]
     await db.canteens.insert_many(canteens)
@@ -52,115 +56,6 @@ async def seed_database():
     # --- IMPROVED GENERATION LOGIC ---
     import random
 
-    # Specific Image Map (Keyword -> Image URL)
-    # Using specific Unsplash IDs to ensure relevance
-    kw_images = {
-        # --- SOUTH INDIAN (Sopanam) ---
-        "Idli": "https://images.unsplash.com/photo-1589301760557-01db1b4aff85?w=500&q=80",
-        "Masala Dosa": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80",
-        "Ghee Roast Dosa": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80",
-        "Rava Dosa": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80", 
-        "Onion Dosa": "https://images.unsplash.com/photo-1589301760557-01db1b4aff85?w=500&q=80", 
-        "Uttapam": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80",
-        "Uzhunnu Vada": "https://images.unsplash.com/photo-1626082929543-5bab0f006c42?w=500&q=80",
-        "Ven Pongal": "https://images.unsplash.com/photo-1610447385848-df8dbcb93368?w=500&q=80",
-        "Rava Upma": "https://images.unsplash.com/photo-1610447384918-620251755a30?w=500&q=80",
-        "Poori Bhaji": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500&q=80",
-        "Veg Biryani": "https://images.unsplash.com/photo-1563379091339-03b47dad6a23?w=500&q=80",
-        "Tomato Rice": "https://images.unsplash.com/photo-1596560548464-f010549b84d7?w=500&q=80",
-        "Curd Rice": "https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=500&q=80",
-        "Lemon Rice": "https://images.unsplash.com/photo-1596560548464-f010549b84d7?w=500&q=80",
-        "Sambar Rice": "https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=500&q=80",
-        "Veg Pulao": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&q=80",
-        "Fried Rice": "https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=500&q=80",
-        "Chapati Curry": "https://images.unsplash.com/photo-1604579278540-12628618a3e7?w=500&q=80",
-        "Veg Meals": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80",
-        "Pazham Pori": "https://images.unsplash.com/photo-1629739763784-1cd5f307cdae?w=500&q=80",
-        "Mulaku Bajji": "https://images.unsplash.com/photo-1629739763784-1cd5f307cdae?w=500&q=80",
-        "Bonda": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&q=80",
-        "Samosa": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&q=80",
-        "Veg Cutlet": "https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&q=80",
-        "Filter Coffee": "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=500&q=80",
-        "Masala Tea": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=500&q=80",
-        "Horlicks": "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&q=80",
-        "Badam Milk": "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&q=80",
-        "Lime Juice": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80",
-
-        # --- NORTH INDIAN / PREMIUM (MBA) ---
-        "Aloo Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
-        "Gobhi Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
-        "Paneer Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
-        "Chole Bhature": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=500&q=80",
-        "Veg Sandwich": "https://images.unsplash.com/photo-1550505393-259250495393?w=500&q=80", # Specific Veg Sandwich
-        "Pancakes": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=500&q=80",
-        "Chicken Biryani": "https://images.unsplash.com/photo-1563379091339-03b47dad6a23?w=500&q=80",
-        "Butter Naan": "https://images.unsplash.com/photo-1602882298642-7065991d3dd6?w=500&q=80",
-        "Paneer Butter Masala": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&q=80",
-        "Chicken Tikka Masala": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=500&q=80",
-        "Dal Makhani": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&q=80",
-        "Chicken Fried Rice": "https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=500&q=80",
-        "Schezwan Noodles": "https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=500&q=80",
-        "Chilli Chicken": "https://images.unsplash.com/photo-1525351473314-192cb91b97b0?w=500&q=80",
-        "Kadai Paneer": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&q=80",
-        "Chicken Roll": "https://images.unsplash.com/photo-1633504581786-316c8002b1b9?w=500&q=80",
-        "Veg Roll": "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&q=80", # Distinct Veg Roll (Spring Roll style)
-        "French Fries": "https://images.unsplash.com/photo-1541592106381-b31e9674c96a?w=500&q=80",
-        "Chicken Nuggets": "https://images.unsplash.com/photo-1562967914-608f82629710?w=500&q=80",
-        "Momos": "https://images.unsplash.com/photo-1626776420079-7a87dd95604a?w=500&q=80",
-        "Mango Lassi": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
-        "Sweet Lassi": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
-        "Cold Coffee": "https://images.unsplash.com/photo-1572442388796-11668a67e569?w=500&q=80",
-        "Chocolate Shake": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=500&q=80",
-        "Oreo Shake": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=500&q=80",
-        "Coke": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80",
-
-        # --- TRADITIONAL (Samudra) ---
-        "Puttu Kadala": "https://images.unsplash.com/photo-1610447385848-df8dbcb93368?w=500&q=80",
-        "Appam Stew": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&q=80",
-        "Idiyappam": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&q=80",
-        "Thatte Idli": "https://images.unsplash.com/photo-1589301760557-01db1b4aff85?w=500&q=80",
-        "Full Meals": "https://images.unsplash.com/photo-1552611052-33e04de081de?w=500&q=80",
-        "Fish Curry Meals": "https://images.unsplash.com/photo-1559847844-5310fd19a03a?w=500&q=80",
-        "Chicken Curry": "https://images.unsplash.com/photo-1604579278540-12628618a3e7?w=500&q=80",
-        "Beef Fry": "https://images.unsplash.com/photo-1616428741366-888e22851cf2?w=500&q=80",
-        "Tapioca & Fish Curry": "https://images.unsplash.com/photo-1604152135912-04a022e23696?w=500&q=80",
-        "Chapati Dal": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&q=80",
-        "Ghee Rice": "https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=500&q=80",
-        "Fish Cutlet": "https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&q=80",
-        "Chicken Cutlet": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80", # Distinct Chicken Cutlet
-        "Egg Puffs": "https://images.unsplash.com/photo-1605658846723-b7d54e0817df?w=500&q=80",
-        "Meat Puffs": "https://images.unsplash.com/photo-1605658846723-b7d54e0817df?w=500&q=80",
-        "Black Tea": "https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=500&q=80",
-        "Black Coffee": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&q=80",
-        "Spiced Buttermilk": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
-        "Fresh Lime Soda": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80",
-        "Mint Lime": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80"
-    }
-
-    # Fallback pool
-    # Fallback pool - High Quality Stable Unsplash IDs
-    image_pool = {
-        "Breakfast": [
-            "https://images.unsplash.com/photo-1553603227-2358fb37d6e1?w=500&q=80", # Idli/Dosa generic
-            "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=500&q=80"  # Vada/Fried
-        ],
-        "Main Course": [
-            "https://images.unsplash.com/photo-1589302168068-964664d93dc0?w=500&q=80", # Biryani
-            "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80", # Meals
-            "https://images.unsplash.com/photo-1506354666786-959d6d497f1a?w=500&q=80"  # Pizza/General
-        ],
-        "Snacks": [
-            "https://images.unsplash.com/photo-1563185393-5ba15e9a4f61?w=500&q=80", # Puffs/Samosa
-            "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&q=80", # Samosa
-            "https://images.unsplash.com/photo-1605658846723-b7d54e0817df?w=500&q=80"  # Snacks
-        ],
-        "Beverages": [
-            "https://images.unsplash.com/photo-1544145945-f90425340c7e?w=500&q=80", # Juices
-            "https://images.unsplash.com/photo-1625772299848-391b6a87d7b3?w=500&q=80", # Coffee
-            "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80"  # Soda
-        ]
-    }
-    
     # Item generators
     base_items = {
         "sopanam": { # South Indian
@@ -212,15 +107,122 @@ async def seed_database():
                  
         return menu_list
 
-    def determine_image(name, category):
-        # 1. Try to find strict partial match in keywords keys
-        name_lower = name.lower()
-        for kw, url in kw_images.items():
-            if kw.lower() in name_lower:
-                return url
+    kw_images = {
+        # --- SOUTH INDIAN (Sopanam) ---
+        "Idli": "https://images.unsplash.com/photo-1589301760557-01db1b4aff85?w=500&q=80",
+        "Masala Dosa": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80",
+        "Ghee Roast Dosa": "https://images.unsplash.com/photo-1648972052187-5121ca495d43?w=500&q=80",
+        "Rava Dosa": "https://images.unsplash.com/photo-1589301760014-d929f39ce9b1?w=500&q=80", 
+        "Onion Dosa": "https://images.unsplash.com/photo-1627662235941-86a02b662d98?w=500&q=80", 
+        "Uttapam": "https://images.unsplash.com/photo-1668236543090-82eba5ee5976?w=500&q=80",
+        "Uzhunnu Vada": "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=500&q=80",
+        "Ven Pongal": "https://images.unsplash.com/photo-1610447385848-df8dbcb93368?w=500&q=80",
+        "Rava Upma": "https://images.unsplash.com/photo-1610447384918-620251755a30?w=500&q=80",
+        "Poori Bhaji": "https://images.unsplash.com/photo-1606491956689-2ea866880c84?w=500&q=80",
+        "Veg Biryani": "https://images.unsplash.com/photo-1563379091339-03b47dad6a23?w=500&q=80",
+        "Tomato Rice": "https://images.unsplash.com/photo-1596560548464-f010549b84d7?w=500&q=80",
+        "Curd Rice": "https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=500&q=80",
+        "Lemon Rice": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&q=80",
+        "Sambar Rice": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80",
+        "Veg Pulao": "https://images.unsplash.com/photo-1512058564366-18510be2db19?w=500&q=80",
+        "Fried Rice": "https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=500&q=80",
+        "Chapati Curry": "https://images.unsplash.com/photo-1604579278540-12628618a3e7?w=500&q=80",
+        "Veg Meals": "https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=500&q=80",
+        "Pazham Pori": "https://images.unsplash.com/photo-1629739763784-1cd5f307cdae?w=500&q=80",
+        "Mulaku Bajji": "https://images.unsplash.com/photo-1629739763784-1cd5f307cdae?w=500&q=80",
+        "Bonda": "https://images.unsplash.com/photo-1601050690597-df0568f70950?w=500&q=80",
+        "Samosa": "https://images.unsplash.com/photo-1563185393-5ba15e9a4f61?w=500&q=80",
+        "Veg Cutlet": "https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&q=80",
+        "Filter Coffee": "https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=500&q=80",
+        "Masala Tea": "https://images.unsplash.com/photo-1556740738-b6a63e27c4df?w=500&q=80",
+        "Horlicks": "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&q=80",
+        "Badam Milk": "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=500&q=80",
+        "Lime Juice": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80",
+
+        # --- NORTH INDIAN / PREMIUM (MBA) ---
+        "Aloo Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
+        "Gobhi Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
+        "Paneer Paratha": "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?w=500&q=80",
+        "Chole Bhature": "https://images.unsplash.com/photo-1626074353765-517a681e40be?w=500&q=80",
+        "Veg Sandwich": "https://images.unsplash.com/photo-1550505393-259250495393?w=500&q=80", 
+        "Pancakes": "https://images.unsplash.com/photo-1567620905732-2d1ec7ab7445?w=500&q=80",
+        "Chicken Biryani": "https://images.unsplash.com/photo-1563379091339-03b47dad6a23?w=500&q=80",
+        "Butter Naan": "https://images.unsplash.com/photo-1602882298642-7065991d3dd6?w=500&q=80",
+        "Paneer Butter Masala": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&q=80",
+        "Chicken Tikka Masala": "https://images.unsplash.com/photo-1599487488170-d11ec9c172f0?w=500&q=80",
+        "Dal Makhani": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&q=80",
+        "Chicken Fried Rice": "https://images.unsplash.com/photo-1603133872878-684f208fb74b?w=500&q=80",
+        "Schezwan Noodles": "https://images.unsplash.com/photo-1612929633738-8fe44f7ec841?w=500&q=80",
+        "Chilli Chicken": "https://images.unsplash.com/photo-1525351473314-192cb91b97b0?w=500&q=80",
+        "Kadai Paneer": "https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=500&q=80",
+        "Chicken Roll": "https://images.unsplash.com/photo-1633504581786-316c8002b1b9?w=500&q=80",
+        "Veg Roll": "https://images.unsplash.com/photo-1509722747041-616f39b57569?w=500&q=80", 
+        "French Fries": "https://images.unsplash.com/photo-1541592106381-b31e9674c96a?w=500&q=80",
+        "Chicken Nuggets": "https://images.unsplash.com/photo-1562967914-608f82629710?w=500&q=80",
+        "Momos": "https://images.unsplash.com/photo-1626776420079-7a87dd95604a?w=500&q=80",
+        "Mango Lassi": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
+        "Sweet Lassi": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
+        "Cold Coffee": "https://images.unsplash.com/photo-1572442388796-11668a67e569?w=500&q=80",
+        "Chocolate Shake": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=500&q=80",
+        "Oreo Shake": "https://images.unsplash.com/photo-1579954115545-a95591f28bfc?w=500&q=80",
+        "Coke": "https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=500&q=80",
+
+        # --- TRADITIONAL (Samudra) ---
+        "Puttu Kadala": "https://images.unsplash.com/photo-1610447385848-df8dbcb93368?w=500&q=80",
+        "Appam Stew": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&q=80",
+        "Idiyappam": "https://images.unsplash.com/photo-1613478223719-2ab802602423?w=500&q=80",
+        "Thatte Idli": "https://images.unsplash.com/photo-1589301760557-01db1b4aff85?w=500&q=80",
+        "Full Meals": "https://images.unsplash.com/photo-1552611052-33e04de081de?w=500&q=80",
+        "Fish Curry Meals": "https://images.unsplash.com/photo-1559847844-5310fd19a03a?w=500&q=80",
+        "Chicken Curry": "https://images.unsplash.com/photo-1604579278540-12628618a3e7?w=500&q=80",
+        "Beef Fry": "https://images.unsplash.com/photo-1616428741366-888e22851cf2?w=500&q=80",
+        "Tapioca & Fish Curry": "https://images.unsplash.com/photo-1604152135912-04a022e23696?w=500&q=80",
+        "Chapati Dal": "https://images.unsplash.com/photo-1588166524941-3bf61a9c41db?w=500&q=80",
+        "Ghee Rice": "https://images.unsplash.com/photo-1594041680534-e8c8cdebd659?w=500&q=80",
+        "Fish Cutlet": "https://images.unsplash.com/photo-1541529086526-db283c563270?w=500&q=80",
+        "Chicken Cutlet": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&q=80",
+        "Egg Puffs": "https://images.unsplash.com/photo-1605658846723-b7d54e0817df?w=500&q=80",
+        "Meat Puffs": "https://images.unsplash.com/photo-1605658846723-b7d54e0817df?w=500&q=80",
+        "Black Tea": "https://images.unsplash.com/photo-1627435601361-ec25f5b1d0e5?w=500&q=80",
+        "Black Coffee": "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=500&q=80",
+        "Spiced Buttermilk": "https://images.unsplash.com/photo-1611090123512-32b7ecb87233?w=500&q=80",
+        "Fresh Lime Soda": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80",
+        "Mint Lime": "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&q=80"
+    }    
+
+    def determine_image(name, category, canteen_id):
+        base_dir = os.path.join(ROOT_DIR, "static", "food_images")
+        if not os.path.exists(base_dir):
+            return fallback_avatar(name)
+
+        term = name.lower().strip()
         
-        # 2. Fallback to category pool
-        return random.choice(image_pool.get(category, image_pool["Main Course"]))
+        # 1. Direct file match priority ("Masala Dosa" -> "masala dosa.jpg")
+        direct_match = os.path.join(base_dir, f"{term}.jpg")
+        if os.path.exists(direct_match):
+            return f"http://localhost:8001/static/food_images/{term}.jpg"
+            
+        # 2. Match without spaces ("masaladosa.jpg")
+        no_space_match = os.path.join(base_dir, f"{term.replace(' ', '')}.jpg")
+        if os.path.exists(no_space_match):
+            return f"http://localhost:8001/static/food_images/{term.replace(' ', '')}.jpg"
+            
+        # 3. Fuzzy search for term inside filename
+        try:
+            files = [f for f in os.listdir(base_dir) if f.endswith(('.jpg', '.jpeg', '.png'))]
+            for f in files:
+                file_base = os.path.splitext(f)[0].lower()
+                if term in file_base or file_base in term:
+                    return f"http://localhost:8001/static/food_images/{f}"
+        except Exception:
+            pass
+            
+        # Fallback if no matching image found locally
+        return fallback_avatar(name)
+
+    def fallback_avatar(name):
+        fallback_color = random.choice(["FF5733", "33FF57", "3357FF", "F333FF", "FF33A1", "33FFF0"])
+        return f"https://ui-avatars.com/api/?name={name.replace(' ', '+')}&background={fallback_color}&color=fff&size=500"
 
     def create_item(canteen_id, index, name, category, is_variant=False):
         # Determine price
@@ -243,7 +245,7 @@ async def seed_database():
             base_price += random.randint(10, 30)
             
         # Select Smart Image
-        img = determine_image(name, category)
+        img = determine_image(name, category, canteen_id)
         
         return {
             "item_id": f"item_{canteen_id}_{index:03d}",
