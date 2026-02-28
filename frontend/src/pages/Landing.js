@@ -9,7 +9,7 @@ export default function Landing() {
   const [showAbout, setShowAbout] = useState(false);
 
   const developers = [
-    { name: "B. Guru Sai Prasad", image: "http://localhost:8001/static/Team Members/Guru.jpg" },
+    { name: "B. Guru Sai Prasad", image: "http://localhost:8001/static/Team Members/Guru.jpg", link: "https://gurusaiprasadreddy.github.io/my-website/" },
     { name: "N. Surya Tejeswar", image: "http://localhost:8001/static/Team Members/Surya.jpg", link: "https://surya-8143.github.io/Portfolio/" },
     { name: "P.M Radha Krishna", image: "http://localhost:8001/static/Team Members/Radha Krishna.jpg" }
   ];
