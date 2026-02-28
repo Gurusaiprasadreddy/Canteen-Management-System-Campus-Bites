@@ -220,7 +220,7 @@ export default function AIRecommendations() {
                         <div className="mt-4 space-y-2">
                           <p className="font-bold text-sm">Recommended Items:</p>
                           {msg.recommendations.map((rec, rIdx) => (
-                            <div key={rIdx} className="bg-white p-2 rounded-lg text-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/student/canteen/${rec.item_id}`)}>
+                            <div key={rIdx} className="bg-white p-2 rounded-lg text-sm flex items-center justify-between cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/student/canteen/${rec.canteen_id}#${rec.item_id}`)}>
                               <span className="font-semibold text-gray-700">{rec.item_name}</span>
                               <ArrowLeft className="w-4 h-4 rotate-180 text-gray-400" />
                             </div>
@@ -356,7 +356,7 @@ export default function AIRecommendations() {
                         {knapsackResult.selectedItemsDetails.map((item, idx) => (
                           <div key={idx} className="bg-white p-3 rounded-xl flex gap-3 items-center border border-gray-200 shadow-sm hover:shadow-md transition-shadow relative group">
                             <img src={getOptimizedImageUrl(item.image_url)} className="w-12 h-12 rounded-lg object-cover bg-gray-100" alt={item.name} />
-                            <div className="flex-1 cursor-pointer" onClick={() => navigate(`/student/canteen/${item.canteen_id}`)}>
+                            <div className="flex-1 cursor-pointer" onClick={() => navigate(`/student/canteen/${item.canteen_id}#${item.item_id}`)}>
                               <p className="font-semibold text-sm line-clamp-1 text-gray-900">{item.name}</p>
                               <p className="text-xs text-orange-600 font-medium">{item.protein}g Protein • ₹{item.price}</p>
                             </div>
@@ -503,7 +503,7 @@ export default function AIRecommendations() {
                                       <p className="font-semibold text-gray-900 line-clamp-2 text-sm h-10 mb-1">{meal.item_name}</p>
                                       <div className="flex justify-between items-center text-xs">
                                         <span className="bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">{meal.protein}g P</span>
-                                        <Button variant="ghost" size="sm" className="h-6 px-2 text-blue-600" onClick={() => navigate(`/student/canteen/${meal.canteen_id}`)}>
+                                        <Button variant="ghost" size="sm" className="h-6 px-2 text-blue-600" onClick={() => navigate(`/student/canteen/${meal.canteen_id}#${meal.item_id}`)}>
                                           Buy
                                         </Button>
                                       </div>

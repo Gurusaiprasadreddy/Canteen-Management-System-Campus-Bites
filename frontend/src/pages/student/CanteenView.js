@@ -74,6 +74,24 @@ export default function CanteenView() {
     filterItems();
   }, [searchQuery, selectedCategory, sortBy, selectedAllergyFilter, menuItems]);
 
+  useEffect(() => {
+    // Scroll to item if navigated with hash
+    if (!loading && filteredItems.length > 0 && window.location.hash) {
+      const id = window.location.hash.replace('#', '');
+      setTimeout(() => {
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          // Optional: Add a brief highlight class to bring attention
+          element.classList.add('ring-4', 'ring-orange-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
+          setTimeout(() => {
+            element.classList.remove('ring-4', 'ring-orange-500', 'ring-opacity-50');
+          }, 2000);
+        }
+      }, 100);
+    }
+  }, [loading, filteredItems, window.location.hash]);
+
   const filterItems = () => {
     let filtered = menuItems;
 
@@ -288,6 +306,7 @@ export default function CanteenView() {
               {filteredItems.map((item) => (
                 <div
                   key={item.item_id}
+                  id={item.item_id}
                   className="bg-white rounded-3xl overflow-hidden shadow-lg border border-orange-100 hover:shadow-xl transition-shadow duration-200"
                   data-testid={`menu-item-${item.item_id}`}
                 >
