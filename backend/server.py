@@ -1217,11 +1217,55 @@ async def update_spending_analytics(student_id: str, amount: float):
 
 @api_router.get("/spending/analytics")
 async def get_spending_analytics(user: dict = Depends(get_current_user)):
-    """Get spending analytics for current user"""
-    analytics = await db.spending_analytics.find_one({"student_id": user['user_id']}, {"_id": 0})
-    if not analytics:
-        return SpendingAnalytics(student_id=user['user_id']).model_dump()
-    return analytics
+    """Get spending analytics for current user dynamically calculated from bills"""
+    from datetime import datetime, timezone, timedelta
+    
+    now = datetime.now(timezone.utc)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    week_start = today_start - timedelta(days=now.weekday())
+    month_start = today_start.replace(day=1)
+    
+    # Get all bills for the user
+    bills = await db.bills.find({"student_id": user['user_id']}).to_list(10000)
+    
+    daily_total = 0.0
+    weekly_total = 0.0
+    monthly_total = 0.0
+    
+    for bill in bills:
+        try:
+            # Parse timestamp and explicitly make it UTC-aware
+            bill_time_str = bill['timestamp']
+            
+            # Fast fix for JS `.toISOString()` format ending in 'Z'
+            if bill_time_str.endswith('Z'):
+                bill_time_str = bill_time_str[:-1] + '+00:00'
+                
+            bill_date = datetime.fromisoformat(bill_time_str)
+            
+            # If still naive (some legacy data), force it to UTC
+            if bill_date.tzinfo is None:
+                bill_date = bill_date.replace(tzinfo=timezone.utc)
+            
+            amount = float(bill.get('amount', 0))
+            
+            if bill_date >= today_start:
+                daily_total += amount
+            if bill_date >= week_start:
+                weekly_total += amount
+            if bill_date >= month_start:
+                monthly_total += amount
+        except Exception as e:
+            logging.error(f"Error parsing bill date for analytics: {e}")
+            continue
+
+    return {
+        "student_id": user['user_id'],
+        "daily_total": daily_total,
+        "weekly_total": weekly_total,
+        "monthly_total": monthly_total,
+        "last_updated": now.isoformat()
+    }
 
 @api_router.get("/spending/bills")
 async def get_all_bills(user: dict = Depends(get_current_user)):
