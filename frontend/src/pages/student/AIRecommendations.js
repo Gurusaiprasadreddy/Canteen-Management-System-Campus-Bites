@@ -358,7 +358,7 @@ export default function AIRecommendations() {
                             <img src={getOptimizedImageUrl(item.image_url)} className="w-12 h-12 rounded-lg object-cover bg-gray-100" alt={item.name} />
                             <div className="flex-1 cursor-pointer" onClick={() => navigate(`/student/canteen/${item.canteen_id}#${item.item_id}`)}>
                               <p className="font-semibold text-sm line-clamp-1 text-gray-900">{item.name}</p>
-                              <p className="text-xs text-orange-600 font-medium">{item.protein}g Protein • ₹{item.price}</p>
+                              <p className="text-xs text-orange-600 font-medium">{item.protein}g Protein • ₹{item.price} • <span className="text-gray-500 capitalize">{item.canteen_id} Canteen</span></p>
                             </div>
                             <Button
                               variant="ghost"
