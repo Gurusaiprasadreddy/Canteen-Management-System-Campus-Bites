@@ -5,6 +5,7 @@ import "@/App.css";
 // Import pages
 import Landing from "@/pages/Landing";
 import SmartLogin from "@/pages/auth/SmartLogin";
+import SmartSignup from "@/pages/auth/SmartSignup";
 
 // Student
 import StudentRegister from "@/pages/student/Register";
@@ -35,14 +36,18 @@ function App() {
 
           {/* Master Auth Section */}
           <Route path="/login" element={<SmartLogin />} />
+          <Route path="/signup" element={<SmartSignup />} />
 
           {/* Legacy Resets */}
           <Route path="/student/login" element={<Navigate to="/login?tab=student" replace />} />
           <Route path="/crew/login" element={<Navigate to="/login?tab=crew" replace />} />
           <Route path="/management/login" element={<Navigate to="/login?tab=management" replace />} />
 
+          <Route path="/student/register" element={<Navigate to="/signup?tab=student" replace />} />
+          <Route path="/crew/signup" element={<Navigate to="/signup?tab=crew" replace />} />
+          <Route path="/management/signup" element={<Navigate to="/signup?tab=management" replace />} />
+
           {/* Student Routes */}
-          <Route path="/student/register" element={<StudentRegister />} />
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/canteen/:canteenId" element={<CanteenView />} />
           <Route path="/student/cart" element={<Cart />} />
@@ -52,11 +57,9 @@ function App() {
           <Route path="/student/ai-recommendations" element={<AIRecommendations />} />
 
           {/* Crew Routes */}
-          <Route path="/crew/signup" element={<CrewSignup />} />
           <Route path="/crew/dashboard" element={<CrewDashboard />} />
 
           {/* Management Routes */}
-          <Route path="/management/signup" element={<ManagementSignup />} />
           <Route path="/management/dashboard" element={<ManagementDashboard />} />
           <Route path="/management/menu" element={<MenuManagement />} />
 

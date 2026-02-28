@@ -1,16 +1,17 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Utensils, Sparkles, TrendingUp, Clock, Shield, Smartphone, X, Code2 } from "lucide-react";
+import { Utensils, Sparkles, TrendingUp, Clock, Shield, Smartphone, X, Code2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Landing() {
   const [showDevelopers, setShowDevelopers] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
 
   const developers = [
+    { name: "B. Guru Sai Prasad", image: "http://localhost:8001/static/Team Members/Guru.jpg" },
     { name: "N. Surya Tejeswar", image: "http://localhost:8001/static/Team Members/Surya.jpg", link: "https://surya-8143.github.io/Portfolio/" },
-    { name: "P.M Radha Krishna", image: "http://localhost:8001/static/Team Members/Radha Krishna.jpg" },
-    { name: "B. Guru Sai Prasad", image: "http://localhost:8001/static/Team Members/Guru.jpg" }
+    { name: "P.M Radha Krishna", image: "http://localhost:8001/static/Team Members/Radha Krishna.jpg" }
   ];
   const features = [
     {
@@ -55,7 +56,11 @@ export default function Landing() {
               <span className="text-2xl font-bold gradient-text">Campus Bites</span>
             </div>
             <div className="flex gap-3">
-              <Button variant="ghost" onClick={() => setShowDevelopers(true)} className="rounded-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium hidden sm:flex items-center gap-2">
+              <Button variant="ghost" onClick={() => setShowAbout(true)} className="rounded-full text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-medium hidden sm:flex items-center gap-2">
+                <Home className="w-4 h-4" />
+                Home
+              </Button>
+              <Button onClick={() => setShowDevelopers(true)} className="rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white shadow-lg shadow-indigo-500/20 font-medium hidden sm:flex items-center gap-2 transition-all">
                 <Code2 className="w-4 h-4" />
                 Developers
               </Button>
@@ -136,6 +141,69 @@ export default function Landing() {
         )}
       </AnimatePresence>
 
+      {/* About Us Modal */}
+      <AnimatePresence>
+        {showAbout && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={() => setShowAbout(false)}>
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} onClick={(e) => e.stopPropagation()} className="bg-white rounded-3xl max-w-2xl w-full shadow-2xl relative overflow-hidden border border-orange-100 max-h-[90vh] flex flex-col">
+
+              {/* Sticky Close Header */}
+              <div className="flex justify-end p-6 pb-0 shrink-0 relative z-20">
+                <button onClick={() => setShowAbout(false)} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-8 pt-2 overflow-y-auto relative z-10 custom-scrollbar">
+                <div className="text-center mb-8 relative z-10">
+                  <div className="inline-flex justify-center items-center w-16 h-16 rounded-full bg-orange-100 mb-4 shadow-inner">
+                    <Utensils className="w-8 h-8 text-orange-600" />
+                  </div>
+                  <h2 className="text-3xl font-bold mb-2 text-gray-900">About Campus Bites</h2>
+                  <div className="w-24 h-1 bg-gradient-to-r from-orange-500 to-amber-500 mx-auto rounded-full"></div>
+                </div>
+
+                <div className="space-y-6 text-gray-700 leading-relaxed text-lg">
+                  <p>
+                    Welcome to <strong className="text-orange-600">Campus Bites</strong>, the ultimate next-generation Canteen Management System designed specifically for our university campus.
+                  </p>
+                  <p>
+                    We recognized the daily struggle of long queues and chaotic ordering during peak rush hours at the Sopanam, MBA, and Samudra canteens. Campus Bites was built to solve this by bringing the entire food ordering experience directly to your fingertips.
+                  </p>
+
+                  <div className="bg-orange-50 p-6 rounded-2xl border border-orange-100 mt-6 shadow-sm">
+                    <h3 className="font-bold text-xl text-gray-900 mb-4">What makes us different?</h3>
+                    <ul className="space-y-4">
+                      <li className="flex gap-3">
+                        <span className="text-xl">🚀</span>
+                        <div><strong className="text-gray-900">Smart Ordering:</strong> Order ahead of time, skip the line, and pick up your meal using a secure unique token system.</div>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="text-xl">🤖</span>
+                        <div><strong className="text-gray-900">AI-Powered Health:</strong> Get personalized food recommendations based on your dietary preferences and health goals, keeping your campus life energized.</div>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="text-xl">📊</span>
+                        <div><strong className="text-gray-900">Intelligent Analytics:</strong> Students can track their exact daily and monthly food expenditures, while Canteen Management gets a bird's-eye view of revenue and popular menu items.</div>
+                      </li>
+                      <li className="flex gap-3">
+                        <span className="text-xl">🔒</span>
+                        <div><strong className="text-gray-900">Secure Role-Based Access:</strong> Dedicated secure portals for Students, Kitchen Crew, and Management staff ensure operations run flawlessly from the kitchen grill to the student's hands.</div>
+                      </li>
+                    </ul>
+                  </div>
+                  <p className="text-center pt-4 font-medium text-gray-900">
+                    Built with passion to modernize campus dining.
+                  </p>
+                </div>
+
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <section className="relative overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="text-center">
@@ -198,6 +266,6 @@ export default function Landing() {
           <p className="text-gray-400">&copy; 2025 Campus Bites. All rights reserved.</p>
         </div>
       </footer>
-    </div>
+    </div >
   );
 }
