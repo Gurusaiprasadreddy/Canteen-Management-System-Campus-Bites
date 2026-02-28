@@ -503,6 +503,18 @@ async def update_menu_item(item_id: str, update: MenuItemUpdate, user: dict = De
     
     return {"message": "Item updated successfully"}
 
+@api_router.delete("/menu/{item_id}")
+async def delete_menu_item(item_id: str, user: dict = Depends(get_current_user)):
+    """Delete menu item (Management/Crew)"""
+    if user['role'] not in ['management', 'crew']:
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    
+    result = await db.menu_items.delete_one({"item_id": item_id})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Item not found")
+    
+    return {"message": "Item deleted successfully"}
+
 # ============================================
 # MANAGEMENT ANALYTICS ENDPOINTS
 # ============================================

@@ -152,6 +152,18 @@ export default function MenuManagement() {
     }
   };
 
+  const handleDelete = async (itemId) => {
+    if (window.confirm('Are you sure you want to permanently delete this item from this canteen? It will no longer appear in the user menu.')) {
+      try {
+        await api.delete(`/menu/${itemId}`);
+        toast.success('Item deleted successfully');
+        fetchData(); // Refresh the menu lists after deletion
+      } catch (error) {
+        toast.error('Failed to delete item');
+      }
+    }
+  };
+
   let filteredItems = selectedCanteen === 'all'
     ? menuItems
     : menuItems.filter(item => item.canteen_id === selectedCanteen);
@@ -162,8 +174,8 @@ export default function MenuManagement() {
 
   if (searchQuery.trim()) {
     const query = searchQuery.toLowerCase();
-    filteredItems = filteredItems.filter(item => 
-      item.name.toLowerCase().includes(query) || 
+    filteredItems = filteredItems.filter(item =>
+      item.name.toLowerCase().includes(query) ||
       (item.ingredients && item.ingredients.toLowerCase().includes(query))
     );
   }
@@ -229,18 +241,17 @@ export default function MenuManagement() {
               </select>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-2 pt-2">
             {categories.map(cat => (
               <Button
                 key={cat}
                 onClick={() => setSelectedCategory(cat)}
                 variant={selectedCategory === cat ? 'default' : 'outline'}
-                className={`rounded-full px-6 py-2 transition-all ${
-                  selectedCategory === cat 
-                    ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent' 
+                className={`rounded-full px-6 py-2 transition-all ${selectedCategory === cat
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent'
                     : 'bg-transparent border-gray-700 text-gray-300 hover:text-white hover:border-gray-500'
-                }`}
+                  }`}
               >
                 {cat === 'all' ? 'All' : cat}
               </Button>
@@ -304,16 +315,27 @@ export default function MenuManagement() {
                 </Button>
               </div>
 
-              {/* Availability Toggle */}
+              {/* Availability Toggle and Delete */}
               <div className="flex items-center justify-between p-3 bg-gray-800 rounded-xl">
                 <span className="text-sm font-medium">
                   {item.available ? '🟢 Available' : '🔴 Out of Stock'}
                 </span>
-                <Switch
-                  checked={item.available}
-                  onCheckedChange={() => handleToggleAvailability(item.item_id, item.available)}
-                  data-testid={`toggle-availability-${item.item_id}`}
-                />
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={item.available}
+                    onCheckedChange={() => handleToggleAvailability(item.item_id, item.available)}
+                    data-testid={`toggle-availability-${item.item_id}`}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                    onClick={() => handleDelete(item.item_id)}
+                    title="Delete Item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
             </motion.div>
           ))}
