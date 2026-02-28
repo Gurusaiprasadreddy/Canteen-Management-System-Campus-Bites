@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, Plus, Edit, Trash2, ArrowLeft, Loader2, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react';
+import { Utensils, Plus, Edit, Trash2, ArrowLeft, Loader2, AlertTriangle, TrendingUp, TrendingDown, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,6 +20,7 @@ export default function MenuManagement() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedCanteen, setSelectedCanteen] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     canteen_id: 'sopanam',
@@ -159,6 +160,14 @@ export default function MenuManagement() {
     filteredItems = filteredItems.filter(item => item.category === selectedCategory);
   }
 
+  if (searchQuery.trim()) {
+    const query = searchQuery.toLowerCase();
+    filteredItems = filteredItems.filter(item => 
+      item.name.toLowerCase().includes(query) || 
+      (item.ingredients && item.ingredients.toLowerCase().includes(query))
+    );
+  }
+
   const categories = ['all', ...new Set(menuItems.map(item => item.category))];
 
   if (loading && !showAddModal) {
@@ -194,33 +203,48 @@ export default function MenuManagement() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <Label className="text-white mb-2 block">Filter by Canteen</Label>
-            <select
-              value={selectedCanteen}
-              onChange={(e) => setSelectedCanteen(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white"
-              data-testid="canteen-filter"
-            >
-              <option value="all">All Canteens</option>
-              {canteens.map(canteen => (
-                <option key={canteen.canteen_id} value={canteen.canteen_id}>{canteen.name}</option>
-              ))}
-            </select>
+        <div className="mb-6 space-y-4">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <Input
+                type="text"
+                placeholder="Search by name or ingredients..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-12 pr-4 py-6 rounded-2xl border border-gray-700 bg-gray-800/50 text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none text-base transition-all"
+              />
+            </div>
+            <div className="w-full md:w-64">
+              <select
+                value={selectedCanteen}
+                onChange={(e) => setSelectedCanteen(e.target.value)}
+                className="w-full h-full px-4 py-3 min-h-[50px] rounded-2xl border border-gray-700 bg-gray-800/50 text-white focus:ring-2 focus:ring-orange-500 outline-none transition-all"
+                data-testid="canteen-filter"
+              >
+                <option value="all">All Canteens</option>
+                {canteens.map(canteen => (
+                  <option key={canteen.canteen_id} value={canteen.canteen_id}>{canteen.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
-          <div>
-            <Label className="text-white mb-2 block">Filter by Category</Label>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full px-4 py-2 rounded-xl border border-gray-700 bg-gray-800 text-white"
-              data-testid="category-filter"
-            >
-              {categories.map(cat => (
-                <option key={cat} value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
-              ))}
-            </select>
+          
+          <div className="flex flex-wrap gap-2 pt-2">
+            {categories.map(cat => (
+              <Button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                variant={selectedCategory === cat ? 'default' : 'outline'}
+                className={`rounded-full px-6 py-2 transition-all ${
+                  selectedCategory === cat 
+                    ? 'bg-orange-500 hover:bg-orange-600 text-white border-transparent' 
+                    : 'bg-transparent border-gray-700 text-gray-300 hover:text-white hover:border-gray-500'
+                }`}
+              >
+                {cat === 'all' ? 'All' : cat}
+              </Button>
+            ))}
           </div>
         </div>
 

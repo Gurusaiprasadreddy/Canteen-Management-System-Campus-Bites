@@ -152,7 +152,10 @@ export default function AIRecommendations() {
         ? `${url}&w=500&q=80&auto=format`
         : `${url}?w=500&q=80&auto=format`;
     }
-    return url;
+    if (url.startsWith('http')) return url;
+
+    const baseUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:8001';
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
   return (

@@ -164,7 +164,7 @@ export default function StudentDashboard() {
                 >
                   <div className="h-48 overflow-hidden">
                     <img
-                      src={canteen.image_url}
+                      src={canteen.image_url?.startsWith('http') ? canteen.image_url : `${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:8001'}${canteen.image_url?.startsWith('/') ? '' : '/'}${canteen.image_url}`}
                       alt={canteen.name}
                       className="w-full h-full object-cover"
                     />

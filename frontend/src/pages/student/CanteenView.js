@@ -46,8 +46,8 @@ export default function CanteenView() {
         if (mounted) {
           const currentCanteen = canteenRes.data.find(c => c.canteen_id === canteenId);
           setCanteen(currentCanteen);
-          setMenuItems(menuRes.data.filter(item => item.available));
-          setFilteredItems(menuRes.data.filter(item => item.available));
+          setMenuItems(menuRes.data);
+          setFilteredItems(menuRes.data);
         }
       } catch (error) {
         if (mounted && error.name !== 'CanceledError') {
@@ -136,6 +136,10 @@ export default function CanteenView() {
   const categories = ['All', ...new Set(menuItems.map(item => item.category))];
 
   const handleAddToCart = (item) => {
+    if (!item.available || item.stock_qty <= 0) {
+      toast.error('This item is unavailable (Out of Stock)');
+      return;
+    }
     addToCart(item, 1);
     setCartCount(getCartItemCount());
     toast.success(`${item.name} added to cart!`);
@@ -143,7 +147,11 @@ export default function CanteenView() {
 
   const getOptimizedImageUrl = (url) => {
     if (!url) return null;
-    return url;
+    if (url.startsWith('http')) return url;
+
+    // Construct full URL using the API base URL or localhost:8001 fallback
+    const baseUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:8001';
+    return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
   };
 
   return (
@@ -331,11 +339,21 @@ export default function CanteenView() {
 
                     <Button
                       onClick={() => handleAddToCart(item)}
-                      className="w-full rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600"
+                      disabled={!item.available || item.stock_qty <= 0}
+                      className={`w-full rounded-xl ${item.available && item.stock_qty > 0
+                        ? 'bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white'
+                        : 'bg-red-500 cursor-not-allowed text-white opacity-80'
+                        }`}
                       data-testid={`add-to-cart-${item.item_id}`}
                     >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add to Cart
+                      {item.available && item.stock_qty > 0 ? (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Add to Cart
+                        </>
+                      ) : (
+                        'Out of Stock'
+                      )}
                     </Button>
                   </div>
                 </div>
