@@ -42,6 +42,15 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 # Create the main app
 app = FastAPI()
 
+# Include the custom nested operation tables assignment routes
+try:
+    from assignment_routes import get_assignment_router
+    app.include_router(get_assignment_router(db))
+except Exception as e:
+    import traceback
+    traceback.print_exc()
+    print(f"Failed to load assignment routes: {e}")
+
 # Mount static folder for local images
 if os.path.isdir(os.path.join(ROOT_DIR, "static")):
     app.mount("/static", StaticFiles(directory=os.path.join(ROOT_DIR, "static")), name="static")
@@ -1832,6 +1841,9 @@ async def crew_chat_endpoint(chat_data: dict, user: dict = Depends(get_current_u
 # Include the router
 app.include_router(api_router)
 
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("server:socket_app", host="0.0.0.0", port=8001, reload=True)
+    # trigger reload
