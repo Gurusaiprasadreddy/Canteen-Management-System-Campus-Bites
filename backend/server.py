@@ -65,6 +65,30 @@ async def startup_db_client():
     except Exception as e:
         logging.error(f"Failed to create TTL index: {e}")
 
+    # ── Keep-Alive: self-ping every 4 minutes to prevent Render free tier sleep ──
+    import asyncio, httpx as _httpx
+
+    async def _keep_alive():
+        # Wait 30s after startup before first ping (let server fully initialize)
+        await asyncio.sleep(30)
+        PING_INTERVAL = 4 * 60  # 4 minutes in seconds
+        SELF_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
+        if not SELF_URL:
+            logging.info("Keep-alive: RENDER_EXTERNAL_URL not set — skipping (local dev)")
+            return
+        health_url = f"{SELF_URL}/api/health"
+        logging.info(f"Keep-alive started — pinging {health_url} every {PING_INTERVAL}s")
+        while True:
+            try:
+                async with _httpx.AsyncClient(timeout=10) as c:
+                    r = await c.get(health_url)
+                    logging.info(f"Keep-alive ping → {r.status_code}")
+            except Exception as e:
+                logging.warning(f"Keep-alive ping failed: {e}")
+            await asyncio.sleep(PING_INTERVAL)
+
+    asyncio.create_task(_keep_alive())
+
 # Socket.IO app
 socket_app = socketio.ASGIApp(sio, app)
 
@@ -93,6 +117,11 @@ async def log_requests(request, call_next):
     process_time = time.time() - start_time
     logging.info(f"REQUEST: {request.method} {request.url.path} - Status: {response.status_code} - Time: {process_time:.4f}s")
     return response
+
+# ── Health check endpoint (used by Render + keep-alive pinger) ──────────────
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "message": "Campus Bites backend is running 🚀"}
 
 # Cache Control Middleware
 @app.middleware("http")

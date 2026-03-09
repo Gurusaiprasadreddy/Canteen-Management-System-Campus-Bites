@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: campus-bites-backend
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:socket_app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGO_URL
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+      - key: RAZORPAY_API_KEY
+        sync: false
