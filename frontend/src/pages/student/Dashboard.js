@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, ShoppingCart, TrendingUp, Sparkles, LogOut, History, Clock } from 'lucide-react';
+import { Utensils, ShoppingCart, TrendingUp, Sparkles, LogOut, History, Clock, Database } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import api from '@/utils/api';
 import { getAuth, clearAuth } from '@/utils/auth';
@@ -97,7 +97,7 @@ export default function StudentDashboard() {
         </motion.div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-12">
           <Link to="/student/orders/history" data-testid="quick-action-history">
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -139,6 +139,17 @@ export default function StudentDashboard() {
               <Sparkles className="w-8 h-8 text-orange-600 mb-3" />
               <h3 className="font-bold text-gray-900">AI Suggestions</h3>
               <p className="text-sm text-gray-600">Personalized meals</p>
+            </motion.div>
+          </Link>
+
+          <Link to="/forms" data-testid="quick-action-forms">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              className="bg-white rounded-2xl p-6 shadow-lg border border-orange-100 hover:shadow-xl"
+            >
+              <Database className="w-8 h-8 text-orange-600 mb-3" />
+              <h3 className="font-bold text-gray-900">Forms</h3>
+              <p className="text-sm text-gray-600">DB master forms</p>
             </motion.div>
           </Link>
         </div>
