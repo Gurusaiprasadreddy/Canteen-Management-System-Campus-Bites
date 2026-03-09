@@ -6,6 +6,15 @@ import "@/App.css";
 import Landing from "@/pages/Landing";
 import SmartLogin from "@/pages/auth/SmartLogin";
 import SmartSignup from "@/pages/auth/SmartSignup";
+import MenuItemPage from "@/pages/forms/MenuItemPage";
+import ProteinGoalPage from "@/pages/forms/ProteinGoalPage";
+import OrderPage from "@/pages/forms/OrderPage";
+import FormsIndex from "@/pages/forms/FormsIndex";
+import StudentMasterPage from "@/pages/forms/StudentMasterPage";
+import CanteenMasterPage from "@/pages/forms/CanteenMasterPage";
+import WellnessQueryPage from "@/pages/forms/WellnessQueryPage";
+import RecommendationLogPage from "@/pages/forms/RecommendationLogPage";
+import RecommendationFeedbackPage from "@/pages/forms/RecommendationFeedbackPage";
 
 // Student
 import StudentRegister from "@/pages/student/Register";
@@ -51,10 +60,12 @@ function App() {
           <Route path="/student/dashboard" element={<StudentDashboard />} />
           <Route path="/student/canteen/:canteenId" element={<CanteenView />} />
           <Route path="/student/cart" element={<Cart />} />
+          <Route path="/student/checkout" element={<OrderPage />} />
           <Route path="/student/orders/tracking" element={<OrderTracking />} />
           <Route path="/student/orders/history" element={<OrderHistory />} />
           <Route path="/student/spending" element={<SpendingAnalytics />} />
           <Route path="/student/ai-recommendations" element={<AIRecommendations />} />
+          <Route path="/student/nutrition-goal" element={<ProteinGoalPage />} />
 
           {/* Crew Routes */}
           <Route path="/crew/dashboard" element={<CrewDashboard />} />
@@ -62,6 +73,17 @@ function App() {
           {/* Management Routes */}
           <Route path="/management/dashboard" element={<ManagementDashboard />} />
           <Route path="/management/menu" element={<MenuManagement />} />
+          <Route path="/management/menu/add" element={<MenuItemPage />} />
+
+          {/* Assignment Forms */}
+          <Route path="/forms" element={<FormsIndex />} />
+          <Route path="/forms/menu-items" element={<MenuItemPage />} />
+          <Route path="/forms/students" element={<StudentMasterPage />} />
+          <Route path="/forms/canteens" element={<CanteenMasterPage />} />
+          <Route path="/forms/orders" element={<OrderPage />} />
+          <Route path="/forms/wellness-queries" element={<WellnessQueryPage />} />
+          <Route path="/forms/recommendation-logs" element={<RecommendationLogPage />} />
+          <Route path="/forms/recommendation-feedback" element={<RecommendationFeedbackPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

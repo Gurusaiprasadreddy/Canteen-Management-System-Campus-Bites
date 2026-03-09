@@ -162,11 +162,12 @@ export default function Cart() {
 
   const fetchRecommendations = async () => {
     try {
-      const response = await api.post('/ai/recommendations/collaborative', {
+      const response = await api.post('/ai/recommendations/cart', {
         current_items: cart.map(item => item.name),
         canteen_id: cart[0]?.canteen_id
       });
-      setRecommendations(response.data.recommendations);
+      // Response includes full item objects with name, price, nutrition
+      setRecommendations(response.data.recommendations || []);
     } catch (error) {
       console.error("Failed to fetch recommendations", error);
     }

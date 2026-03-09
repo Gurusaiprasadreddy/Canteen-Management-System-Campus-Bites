@@ -30,24 +30,26 @@ async def seed_database():
     canteens = [
         {
             "canteen_id": "sopanam",
-            "name": "Sopanam Canteen",
-            "description": "South Indian breakfast & snacks specialist",
-            "operating_hours": "7:00 AM - 10:00 PM",
-            "image_url": "https://images.unsplash.com/photo-1585647313622-77119ffb892a?w=800&q=80"
-        },
-        {
-            "canteen_id": "mba",
             "name": "MBA Canteen",
             "description": "North Indian meals & premium dining",
             "operating_hours": "8:00 AM - 9:00 PM",
-            "image_url": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=800&q=80"
+            "image_url": "/static/canteen_images/prasada_asb_canteen.jpeg"
+        },
+        {
+        
+            "canteen_id": "mba",
+            "name": "Sopanam Canteen",
+            "description": "South Indian breakfast & snacks specialist",
+            "operating_hours": "7:00 AM - 10:00 PM",
+            "image_url": "/static/canteen_images/sopanam_canteen.jpeg"
+
         },
         {
             "canteen_id": "samudra",
             "name": "Samudra Canteen",
             "description": "Traditional meals & health options",
             "operating_hours": "7:30 AM - 9:30 PM",
-            "image_url": "https://images.unsplash.com/photo-1414235077428-338988a2e8c0?w=800&q=80"
+            "image_url": "/static/canteen_images/samudra_canteen.jpg"
         }
     ]
     await db.canteens.insert_many(canteens)
@@ -442,6 +444,140 @@ async def seed_database():
     if demo_orders:
         await db.orders.insert_many(demo_orders)
         print(f"✅ {len(demo_orders)} demo orders seeded")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SEED HISTORICAL COMPLETED ORDERS FOR APRIORI TRAINING
+    # ─────────────────────────────────────────────────────────────────────────
+    # Each list below defines a *combo pattern*: (probability, [item_names])
+    # The seeder repeats these combos with slight randomness so Apriori can
+    # discover meaningful association rules immediately on a fresh database.
+
+    sopanam_patterns = [
+        (0.25, ["Masala Dosa", "Filter Coffee"]),
+        (0.20, ["Idli", "Filter Coffee"]),
+        (0.18, ["Ghee Roast Dosa", "Masala Tea"]),
+        (0.15, ["Ven Pongal", "Filter Coffee"]),
+        (0.12, ["Samosa", "Masala Tea"]),
+        (0.10, ["Veg Biryani", "Lime Juice"]),
+        (0.08, ["Uzhunnu Vada", "Filter Coffee"]),
+        (0.08, ["Poori Bhaji", "Masala Tea"]),
+        (0.07, ["Pazham Pori", "Filter Coffee"]),
+        (0.06, ["Rava Upma", "Horlicks"]),
+        (0.06, ["Bonda", "Masala Tea"]),
+        (0.05, ["Uttapam", "Filter Coffee"]),
+        (0.05, ["Samosa", "Lime Juice"]),
+        (0.04, ["Masala Dosa", "Lime Juice"]),
+        (0.04, ["Veg Meals", "Badam Milk"]),
+        (0.10, ["Masala Dosa", "Filter Coffee", "Uzhunnu Vada"]),
+        (0.08, ["Idli", "Samosa", "Filter Coffee"]),
+        (0.06, ["Rava Dosa", "Masala Tea"]),
+    ]
+
+    mba_patterns = [
+        (0.25, ["Chicken Biryani", "Cold Coffee"]),
+        (0.20, ["Paneer Butter Masala", "Butter Naan"]),
+        (0.18, ["Chicken Biryani", "Mango Lassi"]),
+        (0.16, ["Dal Makhani", "Butter Naan"]),
+        (0.14, ["Momos", "Cold Coffee"]),
+        (0.12, ["Chilli Chicken", "Fried Rice"]),
+        (0.11, ["French Fries", "Coke"]),
+        (0.10, ["Chicken Roll", "Coke"]),
+        (0.09, ["Chicken Tikka Masala", "Butter Naan"]),
+        (0.08, ["Schezwan Noodles", "Cold Coffee"]),
+        (0.07, ["Momos", "Coke"]),
+        (0.07, ["Aloo Paratha", "Sweet Lassi"]),
+        (0.06, ["Chole Bhature", "Mango Lassi"]),
+        (0.06, ["Veg Biryani", "Sweet Lassi"]),
+        (0.05, ["Kadai Paneer", "Butter Naan"]),
+        (0.10, ["Chicken Biryani", "Cold Coffee", "French Fries"]),
+        (0.08, ["Paneer Butter Masala", "Butter Naan", "Sweet Lassi"]),
+        (0.06, ["Chicken Fried Rice", "Cold Coffee"]),
+    ]
+
+    samudra_patterns = [
+        (0.25, ["Full Meals", "Spiced Buttermilk"]),
+        (0.22, ["Fish Curry Meals", "Black Tea"]),
+        (0.18, ["Puttu Kadala", "Black Tea"]),
+        (0.15, ["Appam Stew", "Black Coffee"]),
+        (0.12, ["Chicken Curry", "Ghee Rice"]),
+        (0.11, ["Beef Fry", "Ghee Rice"]),
+        (0.10, ["Egg Puffs", "Black Tea"]),
+        (0.09, ["Fish Cutlet", "Fresh Lime Soda"]),
+        (0.08, ["Idiyappam", "Black Tea"]),
+        (0.07, ["Meat Puffs", "Black Coffee"]),
+        (0.07, ["Tapioca & Fish Curry", "Black Tea"]),
+        (0.06, ["Chapati Dal", "Spiced Buttermilk"]),
+        (0.06, ["Chicken Cutlet", "Mint Lime"]),
+        (0.05, ["Ghee Dosa", "Black Coffee"]),
+        (0.05, ["Full Meals", "Fresh Lime Soda"]),
+        (0.09, ["Fish Curry Meals", "Spiced Buttermilk", "Black Tea"]),
+        (0.07, ["Chicken Curry", "Ghee Rice", "Spiced Buttermilk"]),
+    ]
+
+    historical_orders = []
+    # Generate ~85 orders per canteen (≈255 total) based on weighted patterns
+    ORDERS_PER_CANTEEN = 85
+
+    for canteen_id, patterns in [
+        ("sopanam", sopanam_patterns),
+        ("mba", mba_patterns),
+        ("samudra", samudra_patterns),
+    ]:
+        # Get canteen menu items for price lookup
+        canteen_menu = await db.menu_items.find({"canteen_id": canteen_id}, {"_id": 0, "name": 1, "item_id": 1, "price": 1}).to_list(200)
+        price_map = {item["name"]: item for item in canteen_menu}
+
+        # Build weighted list of patterns for random selection
+        weighted_patterns = []
+        for prob, items in patterns:
+            count = max(1, round(prob * ORDERS_PER_CANTEEN))
+            weighted_patterns.extend([items] * count)
+
+        random.shuffle(weighted_patterns)
+        # Trim / extend to exactly ORDERS_PER_CANTEEN
+        while len(weighted_patterns) < ORDERS_PER_CANTEEN:
+            weighted_patterns.append(random.choice([p[1] for p in patterns]))
+        weighted_patterns = weighted_patterns[:ORDERS_PER_CANTEEN]
+
+        for i, item_names in enumerate(weighted_patterns):
+            order_items = []
+            total_amount = 0.0
+            for name in item_names:
+                menu_item = price_map.get(name)
+                price = menu_item["price"] if menu_item else 50.0
+                item_id = menu_item["item_id"] if menu_item else f"item_{canteen_id}_unknown"
+                order_items.append({
+                    "item_id": item_id,
+                    "item_name": name,
+                    "quantity": 1,
+                    "price_at_order": price,
+                })
+                total_amount += price
+
+            # Spread over last 30 days for realistic time distribution
+            days_ago = random.randint(0, 30)
+            hours_ago = random.randint(0, 23)
+            created_time = datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago)
+
+            historical_orders.append({
+                "order_id": f"order_hist_{uuid.uuid4().hex[:12]}",
+                "student_id": f"student_{random.randint(1, 50):03d}",
+                "items": order_items,
+                "canteen_id": canteen_id,
+                "token_number": random.randint(1000000, 9999999),
+                "status": "COMPLETED",
+                "payment_id": f"pay_{uuid.uuid4().hex[:8]}",
+                "razorpay_order_id": f"order_{uuid.uuid4().hex[:8]}",
+                "razorpay_payment_id": f"pay_{uuid.uuid4().hex[:8]}",
+                "total_amount": total_amount,
+                "created_at": created_time.isoformat(),
+                "updated_at": created_time.isoformat(),
+                "expires_at": (created_time + timedelta(hours=1)).isoformat(),
+            })
+
+    if historical_orders:
+        await db.orders.insert_many(historical_orders)
+        print(f"✅ {len(historical_orders)} historical COMPLETED orders seeded (Apriori training data)")
     
     
     

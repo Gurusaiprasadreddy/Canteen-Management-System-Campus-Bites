@@ -84,6 +84,20 @@ class AIService:
                 "items": ["Boiled Eggs", "Protein Shake", "Chicken Salad"],
                 "intent": "Fitness",
                 "response_template": "💪 For your fitness goals, we recommend high-protein options like {items}."
+            },
+            "cold": {
+                "keywords": ["cold", "flu", "fever", "cough", "runny nose", "sneezing", "sick", "throat"],
+                "categories": ["Beverages", "Soups"],
+                "items": ["Masala Tea", "Ginger Tea", "Filter Coffee", "Rasam", "Black Tea", "Pepper Rasam"],
+                "intent": "Cold & Flu Recovery",
+                "response_template": "🤧 Sorry to hear you're unwell! {items} are warm and soothing — they help ease congestion and soothe your throat. Stay hydrated!"
+            },
+            "pain": {
+                "keywords": ["pain", "stomach", "nausea", "vomit", "indigestion", "acidity", "gas", "bloating"],
+                "categories": ["Beverages", "Main Course"],
+                "items": ["Curd Rice", "Badam Milk", "Lime Juice", "Spiced Buttermilk"],
+                "intent": "Digestive Comfort",
+                "response_template": "🫶 For digestive discomfort, light and easy-to-digest options like {items} are ideal. Avoid spicy food for now."
             }
         }
 

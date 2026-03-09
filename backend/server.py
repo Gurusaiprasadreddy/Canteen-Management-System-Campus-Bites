@@ -20,6 +20,7 @@ import uuid
 from models import *
 from auth_utils import hash_password, verify_password, create_jwt_token, get_current_user, generate_token_number
 from ai_service import ai_service
+from recommendation_apriori import get_apriori_recommendations, get_frequent_combos
 
 # MongoDB connection
 mongo_url = os.environ['MONGO_URL']
@@ -703,23 +704,40 @@ async def get_peak_hours(canteen_id: str = None, user: dict = Depends(get_curren
         }
 
 @api_router.get("/management/analytics/combos")
-async def get_frequent_combos(canteen_id: str = None, user: dict = Depends(get_current_user)):
-    """Get frequent item combinations"""
+async def management_frequent_combos(canteen_id: str = None, user: dict = Depends(get_current_user)):
+    """Get frequent item combinations using Apriori algorithm"""
     if user['role'] != 'management':
         raise HTTPException(status_code=403, detail="Unauthorized")
     
     try:
-        # This is a simplified version - real Apriori would be more complex
-        return {
-            "combos": [
-                {"item1": "Chicken Biryani", "item2": "Cold Drink", "frequency": 45, "confidence": 0.75},
-                {"item1": "Veg Biryani", "item2": "Raita", "frequency": 32, "confidence": 0.68},
-                {"item1": "Idli", "item2": "Sambar", "frequency": 28, "confidence": 0.82}
+        # Fetch all COMPLETED orders
+        match_filter = {"status": "COMPLETED"}
+        if canteen_id:
+            match_filter["canteen_id"] = canteen_id
+
+        all_orders = await db.orders.find(match_filter, {"_id": 0, "items": 1}).to_list(length=2000)
+
+        # Build transaction list of item name lists
+        transactions = []
+        for order in all_orders:
+            names = [item.get("item_name") or item.get("name") for item in order.get("items", [])]
+            names = [n for n in names if n]  # filter None
+            if len(names) >= 2:
+                transactions.append(names)
+
+        combos = get_frequent_combos(transactions, min_support=0.03, min_confidence=0.25, top_n=10)
+
+        # Fallback message when not enough data
+        if not combos:
+            combos = [
+                {"item1": "Masala Dosa", "item2": "Filter Coffee", "frequency_pct": 0, "confidence": 0, "lift": 0,
+                 "note": "Insufficient order history — seed more COMPLETED orders to activate Apriori"}
             ]
-        }
+
+        return {"combos": combos, "algorithm": "apriori", "orders_analysed": len(transactions)}
     except Exception as e:
-        logging.error(f"Combos error: {e}")
-        return {"combos": []}
+        logging.error(f"Combos (Apriori) error: {e}")
+        return {"combos": [], "algorithm": "apriori", "orders_analysed": 0}
 
 @api_router.get("/canteens")
 async def get_canteens():
@@ -751,6 +769,395 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
         }
     }
 
+
+
+# ============================================
+# WELLNESS AI ENDPOINTS  (Gemini-powered)
+# ============================================
+
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+
+async def _ask_gemini(prompt: str) -> str:
+    """Call Gemini via the google.generativeai SDK (async-friendly via run_in_executor)."""
+    if not GEMINI_API_KEY:
+        return ""
+    try:
+        import google.generativeai as genai
+        import asyncio
+        genai.configure(api_key=GEMINI_API_KEY)
+        model = genai.GenerativeModel('gemini-2.0-flash')
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(None, lambda: model.generate_content(prompt))
+        return response.text.strip()
+    except Exception as e:
+        logging.error(f"Gemini SDK error: {e}")
+        # Try fallback model
+        try:
+            import google.generativeai as genai
+            import asyncio
+            genai.configure(api_key=GEMINI_API_KEY)
+            model = genai.GenerativeModel('gemini-pro')
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: model.generate_content(prompt))
+            return response.text.strip()
+        except Exception as e2:
+            logging.error(f"Gemini fallback model error: {e2}")
+            return ""
+
+@api_router.post("/ai/recommendations/symptom")
+async def wellness_ai_symptom(
+    data: SymptomInput,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Wellness AI — Gemini-powered with smart rule-based fallback.
+    Accepts free-form symptom/feeling descriptions and recommends real canteen items.
+    """
+    symptom_text = data.symptom.strip()
+    canteen_id = data.canteen_id
+
+    # Fetch available menu items from DB
+    query = {"available": True}
+    if canteen_id:
+        query["canteen_id"] = canteen_id
+    available_items = await db.menu_items.find(query, {"_id": 0}).to_list(200)
+
+    if not available_items:
+        return {
+            "recommended_items": [],
+            "explanation": "No menu items found. Please try again later.",
+            "avoid": []
+        }
+
+    item_names_list = ", ".join(
+        [f"{i['name']} (category: {i.get('category','')}, type: {i.get('veg_type','')})"
+         for i in available_items]
+    )
+
+    # ── Gemini path ──────────────────────────────────────────────────────────
+    if GEMINI_API_KEY:
+        prompt = f"""You are a warm, caring campus canteen nutritionist AI.
+
+A student says: "{symptom_text}"
+
+Available canteen items:
+{item_names_list}
+
+Instructions:
+1. Choose 3-4 items from the list above that are genuinely appropriate for this student's condition.
+2. Write a friendly 2-sentence explanation of why these help.
+3. Optionally mention 1 item to avoid.
+
+Reply ONLY in this exact JSON (no markdown, no extra text):
+{{
+  "recommended": ["Exact Item Name 1", "Exact Item Name 2", "Exact Item Name 3"],
+  "explanation": "Friendly explanation here.",
+  "avoid": ["Item to avoid if relevant"]
+}}"""
+
+        gemini_response = await _ask_gemini(prompt)
+
+        if gemini_response:
+            try:
+                import json as _json, re as _re
+                # Extract JSON even if Gemini adds extra text / code fences
+                json_match = _re.search(r'\{[\s\S]*\}', gemini_response)
+                if json_match:
+                    parsed = _json.loads(json_match.group())
+                    rec_names = parsed.get("recommended", [])
+                    explanation = parsed.get("explanation", "")
+                    avoid = parsed.get("avoid", [])
+
+                    recommended_items = []
+                    for name in rec_names:
+                        match = next(
+                            (i for i in available_items
+                             if name.lower() in i["name"].lower() or i["name"].lower() in name.lower()),
+                            None
+                        )
+                        if match:
+                            recommended_items.append({
+                                "item_id": match["item_id"],
+                                "item_name": match["name"],
+                                "canteen_id": match["canteen_id"],
+                                "price": match.get("price"),
+                                "image_url": match.get("image_url"),
+                                "reason": "Recommended by Wellness AI"
+                            })
+
+                    if recommended_items:
+                        return {
+                            "recommended_items": recommended_items,
+                            "explanation": explanation,
+                            "avoid": avoid,
+                            "powered_by": "gemini"
+                        }
+            except Exception as parse_err:
+                logging.warning(f"Gemini JSON parse failed: {parse_err}")
+
+    # ── Smart fallback: enhanced rule-based with real DB item matching ────────
+    symptom_lower = symptom_text.lower()
+
+    WELLNESS_RULES = [
+        {
+            "keywords": ["cold", "flu", "fever", "cough", "sneezing", "sick", "throat", "runny"],
+            "prefer_categories": ["Beverages"],
+            "prefer_keywords": ["tea", "coffee", "lime", "ginger", "pepper", "buttermilk"],
+            "avoid_keywords": ["spicy", "fried", "chilli"],
+            "explanation": "🤧 When you have a cold or flu, warm beverages help soothe your throat and ease congestion. Stay hydrated and get plenty of rest!",
+            "avoid_msg": "Spicy or fried foods that may irritate your throat"
+        },
+        {
+            "keywords": ["headache", "migraine", "head", "pounding"],
+            "prefer_categories": ["Beverages"],
+            "prefer_keywords": ["coffee", "tea", "lime", "juice"],
+            "avoid_keywords": [],
+            "explanation": "☕ Headaches are often linked to dehydration or fatigue. A warm coffee or refreshing drink can help — make sure to stay hydrated!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["stress", "anxious", "anxiety", "worried", "tension", "panic", "depressed", "pressure", "exam"],
+            "prefer_categories": ["Beverages", "Desserts", "Snacks"],
+            "prefer_keywords": ["badam", "milk", "chocolate", "tea", "coffee"],
+            "avoid_keywords": [],
+            "explanation": "🧘 Comfort foods and warm drinks can help calm your mind during stressful times. Take a break and nourish yourself!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["tired", "fatigue", "exhausted", "sleepy", "drained", "low energy", "energy"],
+            "prefer_categories": ["Beverages", "Snacks", "Breakfast"],
+            "prefer_keywords": ["coffee", "tea", "juice", "snack"],
+            "avoid_keywords": [],
+            "explanation": "⚡ Feeling low on energy? A quick snack and an energizing drink will help you get back on track!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["hungry", "starving", "famished", "stomach", "empty", "appetite"],
+            "prefer_categories": ["Main Course", "Breakfast"],
+            "prefer_keywords": ["biryani", "meals", "rice", "dosa", "paratha", "curry"],
+            "avoid_keywords": [],
+            "explanation": "🍽️ You need a filling meal! Here are some hearty options from the canteen that will satisfy your hunger.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["gym", "workout", "protein", "muscle", "fitness", "gains", "training"],
+            "prefer_categories": ["Main Course", "Snacks"],
+            "prefer_keywords": ["chicken", "egg", "protein", "paneer"],
+            "avoid_keywords": [],
+            "explanation": "💪 Great work at the gym! These high-protein options will help your muscles recover and grow.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["nausea", "vomit", "indigestion", "acidity", "gas", "bloating", "upset"],
+            "prefer_categories": ["Main Course", "Beverages"],
+            "prefer_keywords": ["curd", "buttermilk", "lime", "rice", "badam"],
+            "avoid_keywords": ["spicy", "fried", "chilli", "pepper"],
+            "explanation": "🫶 For stomach troubles, light and easy-to-digest foods are your best friend. Avoid spicy or heavy meals.",
+            "avoid_msg": "Spicy, fried, or heavy foods"
+        },
+    ]
+
+    matched_rule = None
+    for rule in WELLNESS_RULES:
+        if any(kw in symptom_lower for kw in rule["keywords"]):
+            matched_rule = rule
+            break
+
+    if matched_rule:
+        # Score items: category match + keyword match in name
+        def score_item(item):
+            score = 0
+            name_lower = item["name"].lower()
+            cat = item.get("category", "")
+            if cat in matched_rule["prefer_categories"]:
+                score += 3
+            for kw in matched_rule["prefer_keywords"]:
+                if kw in name_lower:
+                    score += 2
+            for bad_kw in matched_rule.get("avoid_keywords", []):
+                if bad_kw in name_lower:
+                    score -= 5
+            return score
+
+        scored = sorted(available_items, key=score_item, reverse=True)
+        top_items = scored[:4]
+
+        recommended_items = [{
+            "item_id": i["item_id"],
+            "item_name": i["name"],
+            "canteen_id": i["canteen_id"],
+            "price": i.get("price"),
+            "image_url": i.get("image_url"),
+            "reason": matched_rule["explanation"].split("!")[0]
+        } for i in top_items]
+
+        return {
+            "recommended_items": recommended_items,
+            "explanation": matched_rule["explanation"],
+            "avoid": [matched_rule["avoid_msg"]] if matched_rule.get("avoid_msg") else [],
+            "powered_by": "smart-rules"
+        }
+
+    # Generic fallback
+    import random as _random
+    popular = [i for i in available_items if i.get("category") in ["Main Course", "Beverages", "Snacks"]]
+    _random.shuffle(popular)
+    recommended_items = [{
+        "item_id": i["item_id"],
+        "item_name": i["name"],
+        "canteen_id": i["canteen_id"],
+        "price": i.get("price"),
+        "image_url": i.get("image_url"),
+        "reason": "Popular item"
+    } for i in popular[:3]]
+
+    return {
+        "recommended_items": recommended_items,
+        "explanation": "😊 Here are some popular items from the canteen! Try describing how you're feeling (e.g. 'I have a headache', 'I feel stressed', 'I have a cold') for personalized suggestions.",
+        "avoid": [],
+        "powered_by": "popular"
+    }
+
+
+# ============================================
+# AI CART RECOMMENDATIONS (Order-History-Aware)
+# ============================================
+
+@api_router.post("/ai/recommendations/cart")
+async def ai_cart_recommendations(
+    data: RecommendationInput,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Smart cart recommendations powered by Gemini.
+    Reads the user's personal order history + current cart, suggests what to add.
+    Falls back to smart category-based suggestions if Gemini is unavailable.
+    """
+    current_items = data.current_items  # names of items currently in cart
+    canteen_id = data.canteen_id
+
+    # 1. Fetch available menu items from this canteen
+    query = {"available": True}
+    if canteen_id:
+        query["canteen_id"] = canteen_id
+    available_items = await db.menu_items.find(query, {"_id": 0}).to_list(200)
+    if not available_items:
+        return {"recommendations": [], "source": "none"}
+
+    # 2. Fetch user's last 15 completed orders
+    user_orders = await db.orders.find(
+        {"user_id": user["user_id"], "status": "COMPLETED"},
+        {"_id": 0, "items": 1}
+    ).sort("created_at", -1).limit(15).to_list(15)
+
+    past_items = []
+    for order in user_orders:
+        for it in order.get("items", []):
+            name = it.get("item_name") or it.get("name")
+            if name and name not in past_items:
+                past_items.append(name)
+
+    # Don't recommend what's already in cart
+    cart_set = set(i.lower() for i in current_items)
+    exclude = set(i.lower() for i in current_items)
+
+    # Build menu summary (exclude items already in cart)
+    available_names = [
+        f"{i['name']} ({i.get('category','')})"
+        for i in available_items
+        if i["name"].lower() not in exclude
+    ]
+    menu_str = ", ".join(available_names[:80])  # cap for prompt size
+
+    cart_str = ", ".join(current_items) if current_items else "nothing yet"
+    history_str = ", ".join(past_items[:20]) if past_items else "no history available"
+
+    # ── Gemini path ──────────────────────────────────────────────────────────
+    if GEMINI_API_KEY:
+        prompt = f"""You are a smart canteen recommendation AI.
+
+A student has these items in their cart: {cart_str}
+Their past orders include: {history_str}
+Available menu items (not in cart): {menu_str}
+
+Suggest exactly 3 items from the available list that pair well with their cart items.
+Consider what drinks/sides/desserts complement their main dish.
+For example: biryani → lime juice / coke / raita; dosa → filter coffee / vada.
+
+Reply ONLY in this JSON format (no markdown):
+{{
+  "recommendations": ["Item Name 1", "Item Name 2", "Item Name 3"],
+  "reason": "One short sentence on why these pair well."
+}}"""
+
+        gemini_text = await _ask_gemini(prompt)
+        if gemini_text:
+            try:
+                import json as _json, re as _re
+                m = _re.search(r'\{[\s\S]*\}', gemini_text)
+                if m:
+                    parsed = _json.loads(m.group())
+                    rec_names = parsed.get("recommendations", [])
+                    reason = parsed.get("reason", "")
+                    recs = []
+                    for name in rec_names:
+                        match = next(
+                            (i for i in available_items
+                             if name.lower() in i["name"].lower() or i["name"].lower() in name.lower()),
+                            None
+                        )
+                        if match:
+                            recs.append({
+                                "item_id": match["item_id"],
+                                "item_name": match["name"],
+                                "name": match["name"],
+                                "price": match.get("price"),
+                                "image_url": match.get("image_url"),
+                                "canteen_id": match["canteen_id"],
+                                "nutrition": match.get("nutrition", {}),
+                                "reason": reason
+                            })
+                    if recs:
+                        return {"recommendations": recs, "source": "gemini"}
+            except Exception as e:
+                logging.warning(f"AI cart rec parse error: {e}")
+
+    # ── Smart fallback: category-based pairing ────────────────────────────────
+    # If cart has main course → prefer beverages; if beverages → prefer snacks/mains
+    cart_categories = set()
+    for name in current_items:
+        match = next((i for i in available_items if i["name"].lower() == name.lower()), None)
+        if match:
+            cart_categories.add(match.get("category", ""))
+
+    if "Main Course" in cart_categories or "Breakfast" in cart_categories:
+        prefer_cats = ["Beverages", "Snacks", "Desserts"]
+    elif "Beverages" in cart_categories:
+        prefer_cats = ["Snacks", "Main Course", "Breakfast"]
+    else:
+        prefer_cats = ["Beverages", "Snacks", "Main Course"]
+
+    candidates = [
+        i for i in available_items
+        if i["name"].lower() not in exclude and i.get("category") in prefer_cats
+    ]
+    import random as _rand
+    _rand.shuffle(candidates)
+    top = candidates[:3]
+
+    return {
+        "recommendations": [{
+            "item_id": i["item_id"],
+            "item_name": i["name"],
+            "name": i["name"],
+            "price": i.get("price"),
+            "image_url": i.get("image_url"),
+            "canteen_id": i["canteen_id"],
+            "nutrition": i.get("nutrition", {}),
+            "reason": "Goes great with your order"
+        } for i in top],
+        "source": "smart-fallback"
+    }
 
 
 # ============================================
@@ -1837,6 +2244,62 @@ async def crew_chat_endpoint(chat_data: dict, user: dict = Depends(get_current_u
         "action": action,
         "entity": ai_result.get('entity')
     }
+
+# ============================================
+# APRIORI FOOD RECOMMENDATION ENDPOINT
+# ============================================
+
+@api_router.post("/recommendations/apriori")
+async def apriori_food_recommendations(
+    input_data: RecommendationInput,
+    user: dict = Depends(get_current_user)
+):
+    """
+    Returns Apriori-based food recommendations based on the student's current cart items.
+
+    Request body (RecommendationInput):
+      - current_items: list of item names currently in the cart
+      - canteen_id: (optional) restrict recommendations to this canteen
+
+    Response:
+      - recommendations: list of {item_name, confidence, support, lift}
+      - algorithm: "apriori"
+      - orders_analysed: number of COMPLETED orders used for training
+    """
+    try:
+        # Fetch completed orders (optionally filtered by canteen)
+        match_filter = {"status": "COMPLETED"}
+        if input_data.canteen_id:
+            match_filter["canteen_id"] = input_data.canteen_id
+
+        all_orders = await db.orders.find(match_filter, {"_id": 0, "items": 1}).to_list(length=2000)
+
+        # Build transaction list — list[list[str]] of item names per order
+        transactions = []
+        for order in all_orders:
+            names = [item.get("item_name") or item.get("name") for item in order.get("items", [])]
+            names = [n for n in names if n]
+            if names:
+                transactions.append(names)
+
+        recommendations = get_apriori_recommendations(
+            orders=transactions,
+            current_items=input_data.current_items,
+            min_support=0.03,
+            min_confidence=0.25,
+            top_n=5,
+        )
+
+        return {
+            "recommendations": recommendations,
+            "algorithm": "apriori",
+            "orders_analysed": len(transactions),
+            "cart_items": input_data.current_items,
+        }
+    except Exception as e:
+        logging.error(f"Apriori recommendation error: {e}")
+        return {"recommendations": [], "algorithm": "apriori", "orders_analysed": 0}
+
 
 # Include the router
 app.include_router(api_router)
