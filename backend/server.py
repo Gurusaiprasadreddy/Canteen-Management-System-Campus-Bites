@@ -800,6 +800,66 @@ async def get_ai_insights(user: dict = Depends(get_current_user)):
 
 
 
+# ─── Weekly Revenue (last 7 days) ──────────────────────────────────────────
+@api_router.get("/management/analytics/weekly-revenue")
+async def get_weekly_revenue(canteen_id: str = None, user: dict = Depends(get_current_user)):
+    """Return daily revenue for the last 7 days (for area chart)."""
+    if user['role'] != 'management':
+        raise HTTPException(status_code=403, detail="Unauthorized")
+    try:
+        from datetime import timedelta
+        now = datetime.now(timezone.utc)
+        days = []
+        for i in range(6, -1, -1):
+            day_start = (now - timedelta(days=i)).replace(hour=0, minute=0, second=0, microsecond=0)
+            day_end   = day_start + timedelta(days=1)
+            match = {"status": "COMPLETED",
+                     "created_at": {"$gte": day_start.isoformat(), "$lt": day_end.isoformat()}}
+            if canteen_id:
+                match["canteen_id"] = canteen_id
+            pipeline = [{"$match": match},
+                        {"$group": {"_id": None, "revenue": {"$sum": "$total_amount"}, "orders": {"$sum": 1}}}]
+            result = await db.orders.aggregate(pipeline).to_list(1)
+            days.append({
+                "day": day_start.strftime("%a"),
+                "date": day_start.strftime("%d %b"),
+                "revenue": round(result[0]["revenue"], 2) if result else 0,
+                "orders":  result[0]["orders"] if result else 0
+            })
+        return days
+    except Exception as e:
+        logging.error(f"Weekly revenue error: {e}")
+        return []
+
+# ─── Student Spending by Category ──────────────────────────────────────────
+@api_router.get("/spending/category-breakdown")
+async def get_category_breakdown(user: dict = Depends(get_current_user)):
+    """Return user's spending grouped by food category (Meals, Beverages, Snacks, etc.)."""
+    try:
+        orders = await db.orders.find(
+            {"user_id": user["user_id"], "status": "COMPLETED"}, {"_id": 0, "items": 1}
+        ).to_list(500)
+
+        category_totals: dict = {}
+        for order in orders:
+            for item in order.get("items", []):
+                cat = item.get("category", "Other")
+                spent = item.get("price_at_order", 0) * item.get("quantity", 1)
+                category_totals[cat] = round(category_totals.get(cat, 0) + spent, 2)
+
+        if not category_totals:
+            # Return placeholder buckets
+            return [
+                {"category": "Meals", "amount": 0},
+                {"category": "Beverages", "amount": 0},
+                {"category": "Snacks", "amount": 0},
+            ]
+        return [{"category": k, "amount": v} for k, v in category_totals.items()]
+    except Exception as e:
+        logging.error(f"Category breakdown error: {e}")
+        return []
+
+
 # ============================================
 # WELLNESS AI ENDPOINTS  (Gemini-powered)
 # ============================================

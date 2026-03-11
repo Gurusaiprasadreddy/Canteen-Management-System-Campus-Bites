@@ -10,6 +10,7 @@ import { getSocket, joinRoom, leaveRoom } from '@/utils/socket';
 import { toast } from 'sonner';
 import CrewChat from './CrewChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function CrewDashboard() {
   const navigate = useNavigate();
@@ -271,36 +272,95 @@ export default function CrewDashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome & Performance Summary */}
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <h1 className="text-4xl font-bold mb-2">Welcome, {selectedCanteen?.charAt(0).toUpperCase() + selectedCanteen?.slice(1)} Crew 👋</h1>
-            <p className="text-gray-600">Shift: 8:00 AM - 9:00 PM</p>
+          <div className="lg:col-span-1">
+            <h1 className="text-4xl font-bold mb-2">
+              Welcome, {selectedCanteen?.charAt(0).toUpperCase() + selectedCanteen?.slice(1)} Crew 👋
+            </h1>
+            <p className="text-gray-600 mb-4">Shift: 8:00 AM - 9:00 PM</p>
+
+            {/* Performance Card */}
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+              className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white shadow-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <TrendingUp className="w-5 h-5" />
+                <h3 className="font-bold">Today's Performance</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-blue-100">Orders Completed:</span>
+                  <span className="font-bold">{stats.completed_today}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-100">Avg Prep Time:</span>
+                  <span className="font-bold">{stats.avg_prep_time} min</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-blue-100">Current Queue:</span>
+                  <span className="font-bold">{orders.length}</span>
+                </div>
+              </div>
+            </motion.div>
           </div>
 
-          {/* Performance Card */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-6 text-white shadow-lg"
-          >
-            <div className="flex items-center gap-2 mb-3">
-              <TrendingUp className="w-5 h-5" />
-              <h3 className="font-bold">Today's Performance</h3>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-blue-100">Orders Completed:</span>
-                <span className="font-bold">{stats.completed_today}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blue-100">Avg Prep Time:</span>
-                <span className="font-bold">{stats.avg_prep_time} min</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blue-100">Current Queue:</span>
-                <span className="font-bold">{orders.length}</span>
-              </div>
-            </div>
-          </motion.div>
+          {/* Live Order Status Donut */}
+          <div className="lg:col-span-2 bg-white rounded-3xl p-6 shadow-lg border border-blue-100">
+            <h2 className="text-xl font-bold mb-1 text-gray-900">Live Order Status</h2>
+            <p className="text-xs text-gray-400 mb-4">Real-time breakdown of active queue</p>
+            {(() => {
+              const requested  = orders.filter(o => o.status === 'REQUESTED').length;
+              const preparing  = orders.filter(o => o.status === 'PREPARING').length;
+              const ready      = orders.filter(o => o.status === 'READY').length;
+              const total      = requested + preparing + ready;
+              const donutData  = [
+                { name: 'Requested',  value: requested,  color: '#3b82f6' },
+                { name: 'Preparing',  value: preparing,  color: '#f97316' },
+                { name: 'Ready',      value: ready,      color: '#10b981' },
+              ].filter(d => d.value > 0);
+
+              return total === 0 ? (
+                <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+                  <Clock className="w-10 h-10 mb-2 opacity-30" />
+                  <p className="text-sm">No active orders right now</p>
+                </div>
+              ) : (
+                <div className="flex items-center gap-6">
+                  <ResponsiveContainer width="50%" height={200}>
+                    <PieChart>
+                      <Pie data={donutData} cx="50%" cy="50%" innerRadius={55} outerRadius={85}
+                        paddingAngle={3} dataKey="value"
+                        label={({ cx, cy }) => (
+                          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+                            className="text-xl font-bold" fill="#1f2937">
+                            <tspan x={cx} dy="-0.3em" fontSize={22} fontWeight="bold">{total}</tspan>
+                            <tspan x={cx} dy="1.4em" fontSize={11} fill="#6b7280">active</tspan>
+                          </text>
+                        )}
+                        labelLine={false}
+                      >
+                        {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                      </Pie>
+                      <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #bfdbfe' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="flex flex-col gap-3 flex-1">
+                    {[
+                      { label: 'Requested', count: requested, color: 'bg-blue-500' },
+                      { label: 'Preparing', count: preparing, color: 'bg-orange-500' },
+                      { label: 'Ready',     count: ready,     color: 'bg-green-500' },
+                    ].map(({ label, count, color }) => (
+                      <div key={label} className="flex items-center justify-between p-3 bg-gray-50 rounded-xl">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-3 h-3 rounded-full ${color}`} />
+                          <span className="text-sm font-medium text-gray-700">{label}</span>
+                        </div>
+                        <span className="text-2xl font-bold text-gray-900">{count}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         </div>
 
         {/* Priority Alert */}
