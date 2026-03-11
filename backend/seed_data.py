@@ -30,19 +30,17 @@ async def seed_database():
     canteens = [
         {
             "canteen_id": "sopanam",
-            "name": "MBA Canteen",
-            "description": "North Indian meals & premium dining",
-            "operating_hours": "8:00 AM - 9:00 PM",
-            "image_url": "/static/canteen_images/prasada_asb_canteen.jpeg"
-        },
-        {
-        
-            "canteen_id": "mba",
             "name": "Sopanam Canteen",
             "description": "South Indian breakfast & snacks specialist",
             "operating_hours": "7:00 AM - 10:00 PM",
             "image_url": "/static/canteen_images/sopanam_canteen.jpeg"
-
+        },
+        {
+            "canteen_id": "mba",
+            "name": "MBA Canteen",
+            "description": "North Indian meals & premium dining",
+            "operating_hours": "8:00 AM - 9:00 PM",
+            "image_url": "/static/canteen_images/mba_canteen.jpg"
         },
         {
             "canteen_id": "samudra",
