@@ -27,10 +27,10 @@ const EmptyChart = ({ label }) => (
 const CustomTooltipRevenue = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl p-3 text-sm">
-      <p className="text-gray-300 mb-1">{label}</p>
-      <p className="text-orange-400 font-bold">₹{payload[0]?.value?.toFixed(2)}</p>
-      <p className="text-blue-400">{payload[1]?.value} orders</p>
+    <div className="bg-white border border-orange-200 rounded-xl p-3 text-sm shadow-lg">
+      <p className="text-gray-700 mb-1 font-bold">{label}</p>
+      <p className="text-orange-600 font-bold">₹{payload[0]?.value?.toFixed(2)}</p>
+      <p className="text-blue-600">{payload[1]?.value} orders</p>
     </div>
   );
 };
@@ -310,7 +310,7 @@ export default function ManagementDashboard() {
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(v) => [v, '']} contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 12 }} />
+                  <Tooltip formatter={(v) => [v, '']} contentStyle={{ background: '#ffffff', border: '1px solid #fed7aa', borderRadius: 12, color: '#111827' }} />
                   <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -336,8 +336,9 @@ export default function ManagementDashboard() {
                   <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" width={100} tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <Tooltip
-                    contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 12 }}
-                    labelStyle={{ color: '#e5e7eb' }}
+                    contentStyle={{ background: '#ffffff', border: '1px solid #fed7aa', borderRadius: 12, color: '#111827' }}
+                    labelStyle={{ color: '#111827', fontWeight: '700' }}
+                    itemStyle={{ color: '#374151' }}
                     formatter={(v, name) => [name === 'revenue' ? `₹${v}` : v, name === 'revenue' ? 'Revenue' : 'Qty']}
                   />
                   <Legend wrapperStyle={{ color: '#9ca3af', fontSize: 12 }} />
@@ -363,8 +364,9 @@ export default function ManagementDashboard() {
                     <XAxis dataKey="time" tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <Tooltip
-                      contentStyle={{ background: '#1f2937', border: '1px solid #374151', borderRadius: 12 }}
-                      labelStyle={{ color: '#e5e7eb' }}
+                      contentStyle={{ background: '#ffffff', border: '1px solid #fed7aa', borderRadius: 12, color: '#111827' }}
+                      labelStyle={{ color: '#111827', fontWeight: '700' }}
+                      itemStyle={{ color: '#374151' }}
                       formatter={(v) => [`${v} orders`, 'Volume']}
                     />
                     <Bar dataKey="orders" radius={[6, 6, 0, 0]}>
