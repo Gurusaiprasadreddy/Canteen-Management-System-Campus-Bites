@@ -16,6 +16,15 @@ import WellnessQueryPage from "@/pages/forms/WellnessQueryPage";
 import RecommendationLogPage from "@/pages/forms/RecommendationLogPage";
 import RecommendationFeedbackPage from "@/pages/forms/RecommendationFeedbackPage";
 
+// My Module Forms
+import ManagementAccountPage from "@/pages/forms/ManagementAccountPage";
+import CrewMemberPage from "@/pages/forms/CrewMemberPage";
+import UserAccountPage from "@/pages/forms/UserAccountPage";
+import CrewOrderAssignmentPage from "@/pages/forms/CrewOrderAssignmentPage";
+import SpendingBudgetPage from "@/pages/forms/SpendingBudgetPage";
+import SpendingReportPage from "@/pages/forms/SpendingReportPage";
+import UserActivityLogPage from "@/pages/forms/UserActivityLogPage";
+
 // Student
 import StudentRegister from "@/pages/student/Register";
 import StudentDashboard from "@/pages/student/Dashboard";
@@ -84,6 +93,15 @@ function App() {
           <Route path="/forms/wellness-queries" element={<WellnessQueryPage />} />
           <Route path="/forms/recommendation-logs" element={<RecommendationLogPage />} />
           <Route path="/forms/recommendation-feedback" element={<RecommendationFeedbackPage />} />
+
+          {/* My Module Forms */}
+          <Route path="/forms/management-accounts" element={<ManagementAccountPage />} />
+          <Route path="/forms/crew-members" element={<CrewMemberPage />} />
+          <Route path="/forms/user-accounts" element={<UserAccountPage />} />
+          <Route path="/forms/crew-order-assignments" element={<CrewOrderAssignmentPage />} />
+          <Route path="/forms/spending-budgets" element={<SpendingBudgetPage />} />
+          <Route path="/forms/spending-reports" element={<SpendingReportPage />} />
+          <Route path="/forms/user-activity-logs" element={<UserActivityLogPage />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

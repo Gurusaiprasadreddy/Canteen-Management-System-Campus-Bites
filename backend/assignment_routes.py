@@ -60,6 +60,61 @@ class AssignmentRecommendationFeedback(BaseModel):
     rating: int          # 1-5
     wasHelpful: str      # Yes / No
 
+# ── MY MODULE MODELS (Management, Crew, User Management, Spending Analytics) ──
+
+class MyManagementAccount(BaseModel):
+    id: str
+    name: str
+    email: str
+    canteenAssigned: str   # sopanam / mba / samudra / all
+    accessLevel: str       # Admin / Manager / Viewer
+
+class MyCrewMember(BaseModel):
+    id: str
+    name: str
+    canteenId: str         # sopanam / mba / samudra
+    shift: str             # Morning / Afternoon / Evening
+    contactNumber: str
+
+class MyUserAccount(BaseModel):
+    id: str
+    name: str
+    email: str
+    role: str              # student / management / crew
+    status: str            # Active / Inactive / Suspended
+
+class MyCrewOrderAssignment(BaseModel):
+    id: str
+    crewId: str            # FK → MyCrewMember
+    managerId: str         # FK → MyManagementAccount
+    orderId: str
+    canteenId: str
+    assignedAt: str        # ISO datetime
+
+class MySpendingBudget(BaseModel):
+    id: str
+    userId: str            # FK → MyUserAccount
+    monthYear: str         # e.g. 2025-03
+    budgetLimit: str       # in ₹
+    amountSpent: str       # in ₹
+    alertThreshold: str    # percentage e.g. 80
+
+class MySpendingReport(BaseModel):
+    id: str
+    userId: str            # FK → MyUserAccount
+    period: str            # Weekly / Monthly
+    totalSpent: str
+    topCanteen: str
+    topCategory: str
+    generatedAt: str       # ISO datetime
+
+class MyUserActivityLog(BaseModel):
+    id: str
+    userId: str            # FK → MyUserAccount
+    action: str            # Login / Order Placed / Budget Set / Profile Updated
+    details: str
+    timestamp: str         # ISO datetime
+
 
 def get_assignment_router(db: AsyncIOMotorDatabase) -> APIRouter:
     router = APIRouter(prefix="/api/assignment", tags=["assignment"])
@@ -365,172 +420,263 @@ def get_assignment_router(db: AsyncIOMotorDatabase) -> APIRouter:
             raise HTTPException(status_code=404, detail="Goal not found")
         return {"message": "Deleted"}
 
-    return router
+    # ══════════════════════════════════════════════════════════════
+    # MY MODULE FORMS — Management, Crew, User Management, Spending
+    # ══════════════════════════════════════════════════════════════
 
+    # M1 — MANAGEMENT ACCOUNT MASTER
+    @router.get("/management-accounts")
+    async def get_management_accounts():
+        return await db.my_management_accounts.find({}, {"_id": 0}).to_list(100)
 
-class AssignmentProteinGoal(BaseModel):
-    id: str
-    targetProtein: str
-    budgetLimit: str
+    @router.get("/management-accounts/{acc_id}")
+    async def get_management_account(acc_id: str):
+        rec = await db.my_management_accounts.find_one({"id": acc_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Management Account not found")
+        return rec
 
-class AssignmentOrder(BaseModel):
-    id: str
-    menuItemId: str
-    quantity: int
-    instructions: str
+    @router.post("/management-accounts")
+    async def create_management_account(acc: MyManagementAccount):
+        if await db.my_management_accounts.find_one({"id": acc.id}):
+            raise HTTPException(status_code=400, detail="Account ID already exists")
+        if await db.my_management_accounts.find_one({"email": acc.email}):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        await db.my_management_accounts.insert_one(acc.model_dump())
+        return acc
 
-def get_assignment_router(db: AsyncIOMotorDatabase) -> APIRouter:
-    router = APIRouter(prefix="/api/assignment", tags=["assignment"])
+    @router.put("/management-accounts/{acc_id}")
+    async def update_management_account(acc_id: str, acc: MyManagementAccount):
+        if not await db.my_management_accounts.find_one({"id": acc_id}):
+            raise HTTPException(status_code=404, detail="Account not found")
+        await db.my_management_accounts.replace_one({"id": acc_id}, acc.model_dump())
+        return acc
 
-    # ==========================
-    # MENU ITEMS TABLE
-    # ==========================
-    @router.get("/menu-items")
-    async def get_menu_items():
-        items = await db.assignment_menu_items.find({}, {"_id": 0}).to_list(100)
-        return items
-
-    @router.post("/menu-items")
-    async def create_menu_item(item: AssignmentMenuItem):
-        existing = await db.assignment_menu_items.find_one({"id": item.id})
-        if existing:
-            raise HTTPException(status_code=400, detail="Item ID already exists")
-        await db.assignment_menu_items.insert_one(item.model_dump())
-        return item
-
-    @router.put("/menu-items/{item_id}")
-    async def update_menu_item(item_id: str, item: AssignmentMenuItem):
-        existing = await db.assignment_menu_items.find_one({"id": item_id})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Item not found")
-            
-        if item_id != item.id:
-            collision = await db.assignment_menu_items.find_one({"id": item.id})
-            if collision:
-                raise HTTPException(status_code=400, detail="New Item ID already exists")
-                
-            # NESTED OPERATION (CASCADE UPDATE): 
-            # If a Menu Item ID changes, we must cascade that change to the Orders table.
-            await db.assignment_orders.update_many(
-                {"menuItemId": item_id},
-                {"$set": {"menuItemId": item.id}}
-            )
-
-        await db.assignment_menu_items.replace_one({"id": item_id}, item.model_dump())
-        return item
-
-    @router.delete("/menu-items/{item_id}")
-    async def delete_menu_item(item_id: str):
-        # NESTED OPERATION (RESTRICT DELETE):
-        # Prevent deletion if the Primary Key is being referenced in the Orders table (Foreign Key Constraint).
-        existing_order = await db.assignment_orders.find_one({"menuItemId": item_id})
-        if existing_order:
-            raise HTTPException(status_code=400, detail="Integrity Error: Cannot delete Menu Item. It is currently referenced by an existing Order (Foreign Key Constraint violation).")
-            
-        result = await db.assignment_menu_items.delete_one({"id": item_id})
+    @router.delete("/management-accounts/{acc_id}")
+    async def delete_management_account(acc_id: str):
+        if await db.my_crew_order_assignments.find_one({"managerId": acc_id}):
+            raise HTTPException(status_code=400, detail="Cannot delete — Manager has active Crew Assignments (FK Constraint)")
+        result = await db.my_management_accounts.delete_one({"id": acc_id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Item not found")
+            raise HTTPException(status_code=404, detail="Account not found")
         return {"message": "Deleted"}
 
-    # ==========================
-    # PROTEIN GOALS TABLE
-    # ==========================
-    @router.get("/protein-goals")
-    async def get_protein_goals():
-        goals = await db.assignment_protein_goals.find({}, {"_id": 0}).to_list(100)
-        return goals
+    # M2 — CREW MEMBER MASTER
+    @router.get("/crew-members")
+    async def get_crew_members():
+        return await db.my_crew_members.find({}, {"_id": 0}).to_list(100)
 
-    @router.post("/protein-goals")
-    async def create_protein_goal(goal: AssignmentProteinGoal):
-        existing = await db.assignment_protein_goals.find_one({"id": goal.id})
-        if existing:
-            raise HTTPException(status_code=400, detail="Goal ID already exists")
-        await db.assignment_protein_goals.insert_one(goal.model_dump())
-        return goal
+    @router.get("/crew-members/{crew_id}")
+    async def get_crew_member(crew_id: str):
+        rec = await db.my_crew_members.find_one({"id": crew_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Crew Member not found")
+        return rec
 
-    @router.put("/protein-goals/{goal_id}")
-    async def update_protein_goal(goal_id: str, goal: AssignmentProteinGoal):
-        existing = await db.assignment_protein_goals.find_one({"id": goal_id})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Goal not found")
-            
-        if goal_id != goal.id:
-            collision = await db.assignment_protein_goals.find_one({"id": goal.id})
-            if collision:
-                raise HTTPException(status_code=400, detail="New Goal ID already exists")
-        
-        await db.assignment_protein_goals.replace_one({"id": goal_id}, goal.model_dump())
-        return goal
+    @router.post("/crew-members")
+    async def create_crew_member(crew: MyCrewMember):
+        if await db.my_crew_members.find_one({"id": crew.id}):
+            raise HTTPException(status_code=400, detail="Crew ID already exists")
+        await db.my_crew_members.insert_one(crew.model_dump())
+        return crew
 
-    @router.delete("/protein-goals/{goal_id}")
-    async def delete_protein_goal(goal_id: str):
-        result = await db.assignment_protein_goals.delete_one({"id": goal_id})
+    @router.put("/crew-members/{crew_id}")
+    async def update_crew_member(crew_id: str, crew: MyCrewMember):
+        if not await db.my_crew_members.find_one({"id": crew_id}):
+            raise HTTPException(status_code=404, detail="Crew Member not found")
+        await db.my_crew_members.replace_one({"id": crew_id}, crew.model_dump())
+        return crew
+
+    @router.delete("/crew-members/{crew_id}")
+    async def delete_crew_member(crew_id: str):
+        if await db.my_crew_order_assignments.find_one({"crewId": crew_id}):
+            raise HTTPException(status_code=400, detail="Cannot delete — Crew Member has active Order Assignments (FK Constraint)")
+        result = await db.my_crew_members.delete_one({"id": crew_id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Goal not found")
+            raise HTTPException(status_code=404, detail="Crew Member not found")
         return {"message": "Deleted"}
 
-    # ==========================
-    # ORDERS TABLE
-    # ==========================
-    @router.get("/orders")
-    async def get_orders():
-        orders = await db.assignment_orders.find({}, {"_id": 0}).to_list(100)
-        return orders
+    # M3 — USER ACCOUNT MASTER
+    @router.get("/user-accounts")
+    async def get_user_accounts():
+        return await db.my_user_accounts.find({}, {"_id": 0}).to_list(100)
 
-    @router.post("/orders")
-    async def create_order(order: AssignmentOrder):
-        existing = await db.assignment_orders.find_one({"id": order.id})
-        if existing:
-            raise HTTPException(status_code=400, detail="Order ID already exists")
-            
-        # NESTED OPERATION (FOREIGN KEY CHECK): Does the Menu Item exist in the reference table?
-        menu_item = await db.assignment_menu_items.find_one({"id": order.menuItemId})
-        if not menu_item:
-            raise HTTPException(status_code=400, detail=f"Integrity Error: Menu Item ID '{order.menuItemId}' does not exist in Menu Items table.")
-            
-        # NESTED OPERATION (TRIGGER-LIKE ACTION): Deduct price from Protein Goal Budget limit if present
-        # Mocking finding the generic active user goal
-        goal = await db.assignment_protein_goals.find_one()
-        if goal:
-            try:
-                item_price = float(menu_item.get('price', 0))
-                current_budget = float(goal.get('budgetLimit', 0))
-                new_budget = current_budget - (item_price * order.quantity)
-                
-                await db.assignment_protein_goals.update_one(
-                    {"id": goal['id']},
-                    {"$set": {"budgetLimit": str(max(new_budget, 0))}}
-                )
-            except ValueError:
-                pass # If price or budget isn't numeric, skip this nested operation
+    @router.get("/user-accounts/{user_id}")
+    async def get_user_account(user_id: str):
+        rec = await db.my_user_accounts.find_one({"id": user_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="User Account not found")
+        return rec
 
-        await db.assignment_orders.insert_one(order.model_dump())
-        return order
+    @router.post("/user-accounts")
+    async def create_user_account(user: MyUserAccount):
+        if await db.my_user_accounts.find_one({"id": user.id}):
+            raise HTTPException(status_code=400, detail="User ID already exists")
+        if await db.my_user_accounts.find_one({"email": user.email}):
+            raise HTTPException(status_code=400, detail="Email already registered")
+        await db.my_user_accounts.insert_one(user.model_dump())
+        return user
 
-    @router.put("/orders/{order_id}")
-    async def update_order(order_id: str, order: AssignmentOrder):
-        existing = await db.assignment_orders.find_one({"id": order_id})
-        if not existing:
-            raise HTTPException(status_code=404, detail="Order not found")
-            
-        if order_id != order.id:
-            collision = await db.assignment_orders.find_one({"id": order.id})
-            if collision:
-                raise HTTPException(status_code=400, detail="New Order ID already exists")
-                
-        # NESTED OPERATION (FOREIGN KEY CHECK)
-        menu_item = await db.assignment_menu_items.find_one({"id": order.menuItemId})
-        if not menu_item:
-            raise HTTPException(status_code=400, detail=f"Integrity Error: Menu Item ID '{order.menuItemId}' does not exist.")
-            
-        await db.assignment_orders.replace_one({"id": order_id}, order.model_dump())
-        return order
+    @router.put("/user-accounts/{user_id}")
+    async def update_user_account(user_id: str, user: MyUserAccount):
+        if not await db.my_user_accounts.find_one({"id": user_id}):
+            raise HTTPException(status_code=404, detail="User Account not found")
+        await db.my_user_accounts.replace_one({"id": user_id}, user.model_dump())
+        return user
 
-    @router.delete("/orders/{order_id}")
-    async def delete_order(order_id: str):
-        result = await db.assignment_orders.delete_one({"id": order_id})
+    @router.delete("/user-accounts/{user_id}")
+    async def delete_user_account(user_id: str):
+        if await db.my_user_activity_logs.find_one({"userId": user_id}):
+            raise HTTPException(status_code=400, detail="Cannot delete — User has Activity Logs (FK Constraint)")
+        result = await db.my_user_accounts.delete_one({"id": user_id})
         if result.deleted_count == 0:
-            raise HTTPException(status_code=404, detail="Order not found")
+            raise HTTPException(status_code=404, detail="User Account not found")
+        return {"message": "Deleted"}
+
+    # T1 — CREW ORDER ASSIGNMENT TRANSACTION
+    @router.get("/crew-order-assignments")
+    async def get_crew_order_assignments():
+        return await db.my_crew_order_assignments.find({}, {"_id": 0}).to_list(100)
+
+    @router.get("/crew-order-assignments/{assign_id}")
+    async def get_crew_order_assignment(assign_id: str):
+        rec = await db.my_crew_order_assignments.find_one({"id": assign_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        return rec
+
+    @router.post("/crew-order-assignments")
+    async def create_crew_order_assignment(assign: MyCrewOrderAssignment):
+        if await db.my_crew_order_assignments.find_one({"id": assign.id}):
+            raise HTTPException(status_code=400, detail="Assignment ID already exists")
+        if not await db.my_crew_members.find_one({"id": assign.crewId}):
+            raise HTTPException(status_code=400, detail=f"Crew Member '{assign.crewId}' not found (FK Constraint)")
+        if not await db.my_management_accounts.find_one({"id": assign.managerId}):
+            raise HTTPException(status_code=400, detail=f"Manager Account '{assign.managerId}' not found (FK Constraint)")
+        await db.my_crew_order_assignments.insert_one(assign.model_dump())
+        return assign
+
+    @router.put("/crew-order-assignments/{assign_id}")
+    async def update_crew_order_assignment(assign_id: str, assign: MyCrewOrderAssignment):
+        if not await db.my_crew_order_assignments.find_one({"id": assign_id}):
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        if not await db.my_crew_members.find_one({"id": assign.crewId}):
+            raise HTTPException(status_code=400, detail=f"Crew Member '{assign.crewId}' not found (FK Constraint)")
+        await db.my_crew_order_assignments.replace_one({"id": assign_id}, assign.model_dump())
+        return assign
+
+    @router.delete("/crew-order-assignments/{assign_id}")
+    async def delete_crew_order_assignment(assign_id: str):
+        result = await db.my_crew_order_assignments.delete_one({"id": assign_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Assignment not found")
+        return {"message": "Deleted"}
+
+    # T2 — SPENDING BUDGET TRANSACTION
+    @router.get("/spending-budgets")
+    async def get_spending_budgets():
+        return await db.my_spending_budgets.find({}, {"_id": 0}).to_list(100)
+
+    @router.get("/spending-budgets/{budget_id}")
+    async def get_spending_budget(budget_id: str):
+        rec = await db.my_spending_budgets.find_one({"id": budget_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        return rec
+
+    @router.post("/spending-budgets")
+    async def create_spending_budget(budget: MySpendingBudget):
+        if await db.my_spending_budgets.find_one({"id": budget.id}):
+            raise HTTPException(status_code=400, detail="Budget ID already exists")
+        if not await db.my_user_accounts.find_one({"id": budget.userId}):
+            raise HTTPException(status_code=400, detail=f"User '{budget.userId}' not found (FK Constraint)")
+        await db.my_spending_budgets.insert_one(budget.model_dump())
+        return budget
+
+    @router.put("/spending-budgets/{budget_id}")
+    async def update_spending_budget(budget_id: str, budget: MySpendingBudget):
+        if not await db.my_spending_budgets.find_one({"id": budget_id}):
+            raise HTTPException(status_code=404, detail="Budget not found")
+        if not await db.my_user_accounts.find_one({"id": budget.userId}):
+            raise HTTPException(status_code=400, detail=f"User '{budget.userId}' not found (FK Constraint)")
+        await db.my_spending_budgets.replace_one({"id": budget_id}, budget.model_dump())
+        return budget
+
+    @router.delete("/spending-budgets/{budget_id}")
+    async def delete_spending_budget(budget_id: str):
+        result = await db.my_spending_budgets.delete_one({"id": budget_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Budget not found")
+        return {"message": "Deleted"}
+
+    # T3 — SPENDING REPORT TRANSACTION
+    @router.get("/spending-reports")
+    async def get_spending_reports():
+        return await db.my_spending_reports.find({}, {"_id": 0}).to_list(100)
+
+    @router.get("/spending-reports/{report_id}")
+    async def get_spending_report(report_id: str):
+        rec = await db.my_spending_reports.find_one({"id": report_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Report not found")
+        return rec
+
+    @router.post("/spending-reports")
+    async def create_spending_report(report: MySpendingReport):
+        if await db.my_spending_reports.find_one({"id": report.id}):
+            raise HTTPException(status_code=400, detail="Report ID already exists")
+        if not await db.my_user_accounts.find_one({"id": report.userId}):
+            raise HTTPException(status_code=400, detail=f"User '{report.userId}' not found (FK Constraint)")
+        await db.my_spending_reports.insert_one(report.model_dump())
+        return report
+
+    @router.put("/spending-reports/{report_id}")
+    async def update_spending_report(report_id: str, report: MySpendingReport):
+        if not await db.my_spending_reports.find_one({"id": report_id}):
+            raise HTTPException(status_code=404, detail="Report not found")
+        await db.my_spending_reports.replace_one({"id": report_id}, report.model_dump())
+        return report
+
+    @router.delete("/spending-reports/{report_id}")
+    async def delete_spending_report(report_id: str):
+        result = await db.my_spending_reports.delete_one({"id": report_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Report not found")
+        return {"message": "Deleted"}
+
+    # T4 — USER ACTIVITY LOG TRANSACTION
+    @router.get("/user-activity-logs")
+    async def get_user_activity_logs():
+        return await db.my_user_activity_logs.find({}, {"_id": 0}).to_list(100)
+
+    @router.get("/user-activity-logs/{log_id}")
+    async def get_user_activity_log(log_id: str):
+        rec = await db.my_user_activity_logs.find_one({"id": log_id}, {"_id": 0})
+        if not rec:
+            raise HTTPException(status_code=404, detail="Log not found")
+        return rec
+
+    @router.post("/user-activity-logs")
+    async def create_user_activity_log(log: MyUserActivityLog):
+        if await db.my_user_activity_logs.find_one({"id": log.id}):
+            raise HTTPException(status_code=400, detail="Log ID already exists")
+        if not await db.my_user_accounts.find_one({"id": log.userId}):
+            raise HTTPException(status_code=400, detail=f"User '{log.userId}' not found (FK Constraint)")
+        await db.my_user_activity_logs.insert_one(log.model_dump())
+        return log
+
+    @router.put("/user-activity-logs/{log_id}")
+    async def update_user_activity_log(log_id: str, log: MyUserActivityLog):
+        if not await db.my_user_activity_logs.find_one({"id": log_id}):
+            raise HTTPException(status_code=404, detail="Log not found")
+        await db.my_user_activity_logs.replace_one({"id": log_id}, log.model_dump())
+        return log
+
+    @router.delete("/user-activity-logs/{log_id}")
+    async def delete_user_activity_log(log_id: str):
+        result = await db.my_user_activity_logs.delete_one({"id": log_id})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Log not found")
         return {"message": "Deleted"}
 
     return router
