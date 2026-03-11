@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, ShoppingCart, ArrowLeft, Search, Plus } from 'lucide-react';
+import { Utensils, ShoppingCart, ArrowLeft, Search, Plus, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -328,7 +328,17 @@ export default function CanteenView() {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="text-xl font-bold text-gray-900 mb-1">{item.name}</h3>
-                        <Badge variant={item.veg_type === 'veg' ? 'secondary' : 'destructive'} className="text-xs">
+                        
+                        {/* Rating Display */}
+                        {item.rating_count > 0 && (
+                          <div className="flex items-center gap-1 mb-2">
+                            <Star className="w-4 h-4 fill-orange-500 text-orange-500" />
+                            <span className="text-sm font-bold text-gray-700">{item.rating_average.toFixed(1)}</span>
+                            <span className="text-xs text-gray-500">({item.rating_count} reviews)</span>
+                          </div>
+                        )}
+
+                        <Badge variant={item.veg_type === 'veg' ? 'secondary' : 'destructive'} className="text-xs mt-1">
                           {item.veg_type === 'veg' ? 'Veg' : 'Non-Veg'}
                         </Badge>
                       </div>

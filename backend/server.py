@@ -1618,6 +1618,74 @@ async def delete_orders_batch(batch: OrderBatchDelete, user: dict = Depends(get_
     return {"message": "Status updated"}
 
 # ============================================
+# RATING ENDPOINTS
+# ============================================
+
+@api_router.post("/orders/{order_id}/rate")
+async def rate_order(order_id: str, payload: dict = Body(...), user: dict = Depends(get_current_user)):
+    """Rate an order that is COMPLETED"""
+    order = await db.orders.find_one({"order_id": order_id})
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    if order['student_id'] != user['user_id']:
+        raise HTTPException(status_code=403, detail="Not authorized to rate this order")
+        
+    if order['status'] != "COMPLETED":
+        raise HTTPException(status_code=400, detail="Only COMPLETED orders can be rated")
+        
+    if order.get('is_rated'):
+        raise HTTPException(status_code=400, detail="Order has already been rated")
+        
+    # Extract data
+    delivery_time_rating = payload.get("delivery_time_rating")
+    items_ratings = payload.get("items", []) # List of {item_id, rating}
+    
+    # 1. Save Rating Document
+    new_rating = OrderRating(
+        order_id=order_id,
+        student_id=user['user_id'],
+        canteen_id=order['canteen_id'],
+        delivery_time_rating=delivery_time_rating,
+        items=[OrderItemRating(**item) for item in items_ratings]
+    )
+    
+    rating_dict = new_rating.model_dump()
+    rating_dict['created_at'] = rating_dict['created_at'].isoformat()
+    await db.ratings.insert_one(rating_dict)
+    
+    # 2. Mark order as rated
+    await db.orders.update_one(
+        {"order_id": order_id},
+        {"$set": {"is_rated": True}}
+    )
+    
+    # 3. Update MenuItem average ratings
+    for item_rating in items_ratings:
+        item_id = item_rating['item_id']
+        rating_val = item_rating['rating']
+        
+        menu_item = await db.menu_items.find_one({"item_id": item_id})
+        if menu_item:
+            current_avg = menu_item.get('rating_average', 0.0)
+            current_count = menu_item.get('rating_count', 0)
+            
+            # Calculate new average: ((old_avg * old_count) + new_rating) / (old_count + 1)
+            new_count = current_count + 1
+            new_avg = ((current_avg * current_count) + rating_val) / new_count
+            
+            await db.menu_items.update_one(
+                {"item_id": item_id},
+                {"$set": {
+                    "rating_average": round(new_avg, 1),
+                    "rating_count": new_count
+                }}
+            )
+            
+    return {"message": "Rating submitted successfully"}
+
+
+# ============================================
 # AI RECOMMENDATION ENDPOINTS
 # ============================================
 

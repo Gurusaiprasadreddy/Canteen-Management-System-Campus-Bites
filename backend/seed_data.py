@@ -79,7 +79,24 @@ async def seed_database():
     }
     
     modifiers = ["Special", "Mini", "Family", "Spicy", "Roasted", "Butter", "Ghee", "Masala"]
-    
+
+    # Words in item names that should never receive certain modifiers
+    # Key = modifier (lowercase), Value = set of keywords in item names that block the modifier
+    MODIFIER_BLOCKLIST = {
+        "spicy":   {"tea", "coffee", "juice", "milk", "lassi", "shake", "coke", "soda", "lime", "horlicks", "boost"},
+        "butter":  {"tea", "coffee", "juice", "milk", "lassi", "shake", "coke", "soda", "lime", "horlicks", "boost"},
+        "masala":  {"tea", "coffee", "juice", "milk", "lassi", "shake", "coke", "soda", "lime", "horlicks", "boost",
+                    "masala"},   # avoids "Masala Masala …"
+        "ghee":    {"tea", "coffee", "juice", "milk", "lassi", "shake", "coke", "soda", "lime", "horlicks", "boost"},
+        "roasted": {"tea", "coffee", "juice", "milk", "lassi", "shake", "coke", "soda", "lime", "horlicks", "boost"},
+    }
+
+    def is_valid_combination(modifier: str, item_name: str) -> bool:
+        """Return False if the modifier makes no sense with the item."""
+        blocked_keywords = MODIFIER_BLOCKLIST.get(modifier.lower(), set())
+        item_lower = item_name.lower()
+        return not any(kw in item_lower for kw in blocked_keywords)
+
     def generate_menu_for_canteen(canteen_id, base_dict):
         menu_list = []
         count = 1
@@ -92,15 +109,22 @@ async def seed_database():
         
         # 2. Generate Variations to reach 60+
         target_count = 65
-        
-        while count <= target_count:
+        max_attempts = 500  # guard against infinite loops
+        attempts = 0
+
+        while count <= target_count and attempts < max_attempts:
+            attempts += 1
             # Pick random category and item
             cat = random.choice(list(base_dict.keys()))
             item_name = random.choice(base_dict[cat])
             modifier = random.choice(modifiers)
-            
+
+            # Skip nonsensical combinations
+            if not is_valid_combination(modifier, item_name):
+                continue
+
             new_name = f"{modifier} {item_name}"
-            
+
             if not any(i['name'] == new_name for i in menu_list):
                  menu_list.append(create_item(canteen_id, count, new_name, cat, is_variant=True))
                  count += 1

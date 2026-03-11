@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import api from '@/utils/api';
 import { getAuth } from '@/utils/auth';
 import { toast } from 'sonner';
+import RateOrderModal from '@/components/forms/RateOrderModal';
 
 export default function OrderHistory() {
   const navigate = useNavigate();
@@ -21,6 +22,9 @@ export default function OrderHistory() {
   // Payment State
   const [paymentConfig, setPaymentConfig] = useState(null);
   const [processingPayment, setProcessingPayment] = useState(null);
+
+  // Rating State
+  const [ratingOrder, setRatingOrder] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -301,6 +305,21 @@ export default function OrderHistory() {
                     </Badge>
                   </div>
 
+                  {order.status === 'COMPLETED' && !order.is_rated && (
+                    <div className="mb-4 pl-8">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setRatingOrder(order);
+                        }}
+                        variant="outline"
+                        className="w-full rounded-xl border-orange-200 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                      >
+                        <Star className="w-4 h-4 mr-2" /> Rate Order
+                      </Button>
+                    </div>
+                  )}
+
                   {order.status === 'PENDING_PAYMENT' && (
                     <div className="mb-4 pl-8">
                       <Button
@@ -338,6 +357,19 @@ export default function OrderHistory() {
           </div>
         )}
       </main>
+
+      {/* Rating Modal */}
+      {ratingOrder && (
+        <RateOrderModal 
+          isOpen={true} 
+          order={ratingOrder} 
+          onClose={() => setRatingOrder(null)}
+          onSuccess={() => {
+            fetchOrders();
+            setRatingOrder(null);
+          }}
+        />
+      )}
     </div>
   );
 }

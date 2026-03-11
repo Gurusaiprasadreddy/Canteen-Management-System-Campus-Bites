@@ -80,6 +80,8 @@ class MenuItem(BaseModel):
     veg_type: str  # "veg", "non-veg"
     prep_time: int  # in minutes
     available: bool = True
+    rating_average: float = 0.0
+    rating_count: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MenuItemCreate(BaseModel):
@@ -119,6 +121,7 @@ class Order(BaseModel):
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     total_amount: float
+    is_rated: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     expires_at: datetime
@@ -137,6 +140,21 @@ class OrderStatusUpdate(BaseModel):
 class PaymentVerification(BaseModel):
     payment_id: str
     signature: str
+
+# Rating Models
+class OrderItemRating(BaseModel):
+    item_id: str
+    rating: int  # 1-5
+
+class OrderRating(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    rating_id: str = Field(default_factory=lambda: f"rating_{uuid.uuid4().hex[:12]}")
+    order_id: str
+    student_id: str
+    canteen_id: str
+    delivery_time_rating: int  # 1-5
+    items: List[OrderItemRating]
+    created_at: datetime = Field(default_factory=datetime.utcnow)
 
 # AI Recommendation Models
 class AIRecommendation(BaseModel):
