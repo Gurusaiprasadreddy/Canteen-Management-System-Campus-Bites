@@ -1,7 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Utensils, ShoppingCart, ArrowLeft, Search, Plus, Star } from 'lucide-react';
+import { Utensils, ShoppingCart, ArrowLeft, Search, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -25,9 +25,6 @@ export default function CanteenView() {
   const [sortBy, setSortBy] = useState('name');
   const [selectedAllergyFilter, setSelectedAllergyFilter] = useState('all');
   const [cartCount, setCartCount] = useState(0);
-  const [myRatings, setMyRatings] = useState({});  // item_id → stars
-  const [hoverStars, setHoverStars] = useState({});  // item_id → hovered star
-  const [submittingRating, setSubmittingRating] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -52,14 +49,6 @@ export default function CanteenView() {
           setMenuItems(menuRes.data);
           setFilteredItems(menuRes.data);
         }
-
-        // Fetch user's own ratings
-        try {
-          const ratingsRes = await api.get('/ratings/my/given');
-          const ratingsMap = {};
-          ratingsRes.data.forEach(r => { ratingsMap[r.item_id] = r.stars; });
-          if (mounted) setMyRatings(ratingsMap);
-        } catch {} // ratings are optional
       } catch (error) {
         if (mounted && error.name !== 'CanceledError') {
           console.error("Error fetching data:", error);
@@ -93,7 +82,6 @@ export default function CanteenView() {
         const element = document.getElementById(id);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Optional: Add a brief highlight class to bring attention
           element.classList.add('ring-4', 'ring-orange-500', 'ring-opacity-50', 'transition-all', 'duration-1000');
           setTimeout(() => {
             element.classList.remove('ring-4', 'ring-orange-500', 'ring-opacity-50');
@@ -153,8 +141,6 @@ export default function CanteenView() {
           return b.nutrition.protein - a.nutrition.protein;
         case 'carbs-low':
           return a.nutrition.carbs - b.nutrition.carbs;
-        case 'rating-high':
-          return (b.avg_rating || 0) - (a.avg_rating || 0);
         case 'name':
         default:
           return a.name.localeCompare(b.name);
@@ -179,65 +165,10 @@ export default function CanteenView() {
   const getOptimizedImageUrl = (url) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
+
+    // Construct full URL using the API base URL or localhost:8001 fallback
     const baseUrl = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:8001';
     return `${baseUrl}${url.startsWith('/') ? '' : '/'}${url}`;
-  };
-
-  const handleRateItem = async (item_id, stars) => {
-    setSubmittingRating(item_id);
-    try {
-      const res = await api.post('/ratings', { item_id, stars, review: '' });
-      setMyRatings(prev => ({ ...prev, [item_id]: stars }));
-      // Update avg_rating in local state
-      setMenuItems(prev => prev.map(it =>
-        it.item_id === item_id
-          ? { ...it, avg_rating: res.data.avg_rating, rating_count: (it.rating_count || 0) + 1 }
-          : it
-      ));
-      toast.success(`Rated ${stars} ⭐`);
-    } catch (e) {
-      toast.error('Failed to submit rating');
-    } finally {
-      setSubmittingRating(null);
-    }
-  };
-
-  // Inline star component
-  const StarDisplay = ({ itemId, avgRating, ratingCount }) => {
-    const myRating = myRatings[itemId] || 0;
-    const hover = hoverStars[itemId] || 0;
-    const displayRating = hover || myRating;
-    return (
-      <div style={{ margin: '8px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          {[1,2,3,4,5].map(s => (
-            <button
-              key={s}
-              onClick={() => handleRateItem(itemId, s)}
-              onMouseEnter={() => setHoverStars(p => ({ ...p, [itemId]: s }))}
-              onMouseLeave={() => setHoverStars(p => ({ ...p, [itemId]: 0 }))}
-              disabled={submittingRating === itemId}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 1px', lineHeight: 1 }}
-              title={`Rate ${s} star${s > 1 ? 's' : ''}`}
-            >
-              <Star
-                className="w-4 h-4"
-                fill={s <= displayRating ? '#f97316' : 'none'}
-                stroke={s <= displayRating ? '#f97316' : '#d1d5db'}
-              />
-            </button>
-          ))}
-          {avgRating > 0 && (
-            <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 4 }}>
-              {avgRating} ({ratingCount})
-            </span>
-          )}
-          {myRating > 0 && (
-            <span style={{ fontSize: 11, color: '#f97316', fontWeight: 600 }}>✔ Rated</span>
-          )}
-        </div>
-      </div>
-    );
   };
 
   return (
@@ -358,7 +289,6 @@ export default function CanteenView() {
                       data-testid="sort-select"
                     >
                       <option value="name">Name (A-Z)</option>
-                      <option value="rating-high">⭐ Top Rated</option>
                       <option value="price-low">Price: Low to High</option>
                       <option value="price-high">Price: High to Low</option>
                       <option value="calories-low">Calories: Low to High</option>
@@ -408,14 +338,7 @@ export default function CanteenView() {
                       </div>
                     </div>
 
-                    <p className="text-sm text-gray-600 mb-2 line-clamp-2">{item.ingredients}</p>
-
-                    {/* ⭐ Star Rating */}
-                    <StarDisplay
-                      itemId={item.item_id}
-                      avgRating={item.avg_rating || 0}
-                      ratingCount={item.rating_count || 0}
-                    />
+                    <p className="text-sm text-gray-600 mb-4 line-clamp-2">{item.ingredients}</p>
 
                     <div className="flex flex-wrap gap-2 mb-4">
                       <span className="text-xs px-2 py-1 bg-orange-50 text-orange-700 rounded-full">

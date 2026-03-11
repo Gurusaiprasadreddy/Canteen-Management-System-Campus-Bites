@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { History, ArrowLeft, Trash2, CheckSquare, Square, X, Star } from 'lucide-react';
+import { History, ArrowLeft, Trash2, CheckSquare, Square, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import api from '@/utils/api';
@@ -13,9 +13,6 @@ export default function OrderHistory() {
   const { user } = getAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [myRatings, setMyRatings] = useState({});
-  const [hoverStars, setHoverStars] = useState({});
-  const [submittingRating, setSubmittingRating] = useState(null);
 
   // Selection State
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -32,12 +29,6 @@ export default function OrderHistory() {
     }
     fetchOrders();
     fetchPaymentConfig();
-    // Load existing ratings
-    api.get('/ratings/my/given').then(r => {
-      const map = {};
-      r.data.forEach(rt => { map[rt.item_id] = rt.stars; });
-      setMyRatings(map);
-    }).catch(() => {});
   }, [user?.user_id, navigate]);
 
   const fetchPaymentConfig = async () => {
@@ -188,47 +179,6 @@ export default function OrderHistory() {
     }
   };
 
-  const handleRateItem = async (item_id, stars) => {
-    setSubmittingRating(item_id);
-    try {
-      await api.post('/ratings', { item_id, stars, review: '' });
-      setMyRatings(prev => ({ ...prev, [item_id]: stars }));
-      toast.success(`Rated ${stars} ⭐`);
-    } catch {
-      toast.error('Failed to submit rating');
-    } finally {
-      setSubmittingRating(null);
-    }
-  };
-
-  const ItemStars = ({ itemId }) => {
-    const my = myRatings[itemId] || 0;
-    const hover = hoverStars[itemId] || 0;
-    const display = hover || my;
-    return (
-      <span style={{ display: 'inline-flex', gap: 2, marginLeft: 8, verticalAlign: 'middle' }}>
-        {[1,2,3,4,5].map(s => (
-          <button
-            key={s}
-            onClick={() => handleRateItem(itemId, s)}
-            onMouseEnter={() => setHoverStars(p => ({ ...p, [itemId]: s }))}
-            onMouseLeave={() => setHoverStars(p => ({ ...p, [itemId]: 0 }))}
-            disabled={submittingRating === itemId}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
-            title={`Rate ${s}`}
-          >
-            <Star
-              style={{ width: 14, height: 14 }}
-              fill={s <= display ? '#f97316' : 'none'}
-              stroke={s <= display ? '#f97316' : '#d1d5db'}
-            />
-          </button>
-        ))}
-        {my > 0 && <span style={{ fontSize: 10, color: '#f97316', fontWeight: 700, marginLeft: 2 }}>✔</span>}
-      </span>
-    );
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white">
@@ -372,19 +322,11 @@ export default function OrderHistory() {
 
                   <div className="space-y-2 pl-8">
                     {order.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-sm items-center">
-                        <span>
-                          {item.item_name} x{item.quantity}
-                          {order.status === 'COMPLETED' && (
-                            <ItemStars itemId={item.item_id} />
-                          )}
-                        </span>
+                      <div key={idx} className="flex justify-between text-sm">
+                        <span>{item.item_name} x{item.quantity}</span>
                         <span className="text-gray-600">₹{(item.price_at_order * item.quantity).toFixed(2)}</span>
                       </div>
                     ))}
-                    {order.status === 'COMPLETED' && (
-                      <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>⭐ Click stars to rate each item</p>
-                    )}
                     <div className="border-t pt-2 flex justify-between font-bold">
                       <span>Total</span>
                       <span className="text-orange-600">₹{order.total_amount.toFixed(2)}</span>
