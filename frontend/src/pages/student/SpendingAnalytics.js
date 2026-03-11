@@ -180,7 +180,9 @@ export default function SpendingAnalytics() {
                     ))}
                   </Pie>
                   <Tooltip formatter={(v) => [`₹${v}`, 'Spent']}
-                    contentStyle={{ borderRadius: 12, border: '1px solid #fed7aa' }} />
+                    contentStyle={{ background: '#ffffff', borderRadius: 12, border: '1px solid #fed7aa' }}
+                    labelStyle={{ color: '#111827', fontWeight: '700' }}
+                    itemStyle={{ color: '#374151' }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
               </ResponsiveContainer>
@@ -204,7 +206,10 @@ export default function SpendingAnalytics() {
                   <PolarAngleAxis dataKey="subject" tick={{ fontSize: 11, fill: '#6b7280' }} />
                   <PolarRadiusAxis tick={{ fontSize: 9, fill: '#9ca3af' }} />
                   <Radar name="Avg" dataKey="A" stroke="#f97316" fill="#f97316" fillOpacity={0.25} strokeWidth={2} />
-                  <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #fed7aa' }} />
+                  <Tooltip
+                    contentStyle={{ background: '#ffffff', borderRadius: 12, border: '1px solid #fed7aa' }}
+                    labelStyle={{ color: '#111827', fontWeight: '700' }}
+                    itemStyle={{ color: '#374151' }} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </RadarChart>
               </ResponsiveContainer>

@@ -339,7 +339,7 @@ export default function CrewDashboard() {
                       >
                         {donutData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
                       </Pie>
-                      <Tooltip contentStyle={{ borderRadius: 12, border: '1px solid #bfdbfe' }} />
+                      <Tooltip contentStyle={{ background: '#ffffff', borderRadius: 12, border: '1px solid #bfdbfe', color: '#111827' }} />
                     </PieChart>
                   </ResponsiveContainer>
                   <div className="flex flex-col gap-3 flex-1">
