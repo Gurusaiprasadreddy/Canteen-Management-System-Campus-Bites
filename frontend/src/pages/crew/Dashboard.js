@@ -614,13 +614,6 @@ export default function CrewDashboard() {
           </div>
         )}
       </main>
-
-      {/* AI Assistant Chat */}
-      <CrewChat
-        canteenId={selectedCanteen}
-        onVerifyToken={handleVerifyToken}
-        onShowOrders={(type) => setFilter(type)}
-      />
     </div>
   );
 }
