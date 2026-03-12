@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { History, ArrowLeft, Trash2, CheckSquare, Square, X } from 'lucide-react';
+import { History, ArrowLeft, Trash2, CheckSquare, Square, X, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import api from '@/utils/api';
