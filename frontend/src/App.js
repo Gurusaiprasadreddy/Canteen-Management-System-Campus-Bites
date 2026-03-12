@@ -1,5 +1,7 @@
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { Toaster } from "@/components/ui/sonner";
+import api from '@/utils/api';
 import "@/App.css";
 
 // Import pages
@@ -45,6 +47,15 @@ import ManagementDashboard from "@/pages/management/Dashboard";
 import MenuManagement from "@/pages/management/MenuManagement";
 
 function App() {
+  // Keep-alive ping to prevent Render backend from spinning down
+  useEffect(() => {
+    const pingInterval = setInterval(() => {
+      api.get('/health').catch(err => console.log('Keep-alive ping failed:', err));
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(pingInterval);
+  }, []);
+
   return (
     <div className="App">
       <BrowserRouter>
