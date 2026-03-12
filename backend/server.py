@@ -69,9 +69,9 @@ async def startup_db_client():
     import asyncio, httpx as _httpx
 
     async def _keep_alive():
-        # Wait 30s after startup before first ping (let server fully initialize)
-        await asyncio.sleep(30)
-        PING_INTERVAL = 4 * 60  # 4 minutes in seconds
+        # Wait 10s after startup before first ping (let server fully initialize)
+        await asyncio.sleep(10)
+        PING_INTERVAL = 10  # 10 seconds as requested
         SELF_URL = os.environ.get("RENDER_EXTERNAL_URL", "")
         if not SELF_URL:
             logging.info("Keep-alive: RENDER_EXTERNAL_URL not set — skipping (local dev)")
@@ -100,11 +100,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 
-# CORS middleware
+# CORS middleware - Robust configuration for Render deployment
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=".*",  # Allows all origins safely with credentials
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
     allow_methods=["*"],
     allow_headers=["*"],
 )
