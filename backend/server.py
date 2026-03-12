@@ -933,15 +933,16 @@ Available canteen items:
 {item_names_list}
 
 Instructions:
-1. Choose 3-4 items from the list above that are genuinely appropriate for this student's condition.
-2. Write a friendly 2-sentence explanation of why these help.
-3. Optionally mention 1 item to avoid.
+1. If the student is just greeting you or chatting casually (e.g. "hi", "how are you"), reply with a friendly greeting and ask them how they are feeling (e.g., if they are stressed, tired, hungry, or have a cold). Leave "recommended" empty.
+2. If they describe symptoms, goals, or cravings, choose 2-4 appropriate items from the list above.
+3. Write a friendly 1-3 sentence conversational response in "explanation".
+4. Optionally mention items to avoid if relevant.
 
-Reply ONLY in this exact JSON (no markdown, no extra text):
+Reply ONLY in this exact strict JSON format (no markdown code blocks, just raw JSON):
 {{
-  "recommended": ["Exact Item Name 1", "Exact Item Name 2", "Exact Item Name 3"],
-  "explanation": "Friendly explanation here.",
-  "avoid": ["Item to avoid if relevant"]
+  "recommended": ["Exact Item Name 1", "Exact Item Name 2"],
+  "explanation": "Friendly conversational response here.",
+  "avoid": []
 }}"""
 
         gemini_response = await _ask_gemini(prompt)
@@ -954,33 +955,33 @@ Reply ONLY in this exact JSON (no markdown, no extra text):
                 if json_match:
                     parsed = _json.loads(json_match.group())
                     rec_names = parsed.get("recommended", [])
-                    explanation = parsed.get("explanation", "")
+                    explanation = parsed.get("explanation", "I'm here to help you feel better!")
                     avoid = parsed.get("avoid", [])
 
                     recommended_items = []
-                    for name in rec_names:
-                        match = next(
-                            (i for i in available_items
-                             if name.lower() in i["name"].lower() or i["name"].lower() in name.lower()),
-                            None
-                        )
-                        if match:
-                            recommended_items.append({
-                                "item_id": match["item_id"],
-                                "item_name": match["name"],
-                                "canteen_id": match["canteen_id"],
-                                "price": match.get("price"),
-                                "image_url": match.get("image_url"),
-                                "reason": "Recommended by Wellness AI"
-                            })
+                    if rec_names:
+                        for name in rec_names:
+                            match = next(
+                                (i for i in available_items
+                                 if name.lower() in i["name"].lower() or i["name"].lower() in name.lower()),
+                                None
+                            )
+                            if match:
+                                recommended_items.append({
+                                    "item_id": match["item_id"],
+                                    "item_name": match["name"],
+                                    "canteen_id": match["canteen_id"],
+                                    "price": match.get("price"),
+                                    "image_url": match.get("image_url"),
+                                    "reason": "Recommended by Wellness AI"
+                                })
 
-                    if recommended_items:
-                        return {
-                            "recommended_items": recommended_items,
-                            "explanation": explanation,
-                            "avoid": avoid,
-                            "powered_by": "gemini"
-                        }
+                    return {
+                        "recommended_items": recommended_items,
+                        "explanation": explanation,
+                        "avoid": avoid,
+                        "powered_by": "gemini"
+                    }
             except Exception as parse_err:
                 logging.warning(f"Gemini JSON parse failed: {parse_err}")
 
@@ -988,69 +989,341 @@ Reply ONLY in this exact JSON (no markdown, no extra text):
     symptom_lower = symptom_text.lower()
 
     WELLNESS_RULES = [
+
+        # ── HEALTH / PHYSICAL ILLNESS ─────────────────────────────────────────
         {
-            "keywords": ["cold", "flu", "fever", "cough", "sneezing", "sick", "throat", "runny"],
-            "prefer_categories": ["Beverages"],
-            "prefer_keywords": ["tea", "coffee", "lime", "ginger", "pepper", "buttermilk"],
+            "keywords": ["fever", "high temperature", "chills", "feverish", "hot body", "body heat", "burning up", "temperature"],
+            "prefer_categories": ["Beverages", "Main Course"],
+            "prefer_keywords": ["curd", "rice", "coconut", "lime", "rasam", "buttermilk", "plain"],
+            "avoid_keywords": ["spicy", "fried", "chilli", "masala", "pepper"],
+            "explanation": "🌡️ When you have a fever, your body needs light, easy-to-digest foods and plenty of fluids. Stay hydrated and avoid heavy or spicy meals. Rest well!",
+            "avoid_msg": "Spicy, fried, or heavy foods that are hard to digest"
+        },
+        {
+            "keywords": ["sick", "unwell", "not feeling well", "feeling sick", "recovering", "ill", "under the weather", "cold", "flu", "cough", "sneezing", "runny nose", "blocked nose", "sore throat", "congestion"],
+            "prefer_categories": ["Beverages", "Soups"],
+            "prefer_keywords": ["tea", "coffee", "rasam", "lime", "ginger", "pepper", "buttermilk", "soup"],
             "avoid_keywords": ["spicy", "fried", "chilli"],
-            "explanation": "🤧 When you have a cold or flu, warm beverages help soothe your throat and ease congestion. Stay hydrated and get plenty of rest!",
+            "explanation": "🤧 Sorry you're unwell! Warm beverages and light foods will soothe your throat and help you recover faster. Stay hydrated and rest!",
             "avoid_msg": "Spicy or fried foods that may irritate your throat"
         },
         {
-            "keywords": ["headache", "migraine", "head", "pounding"],
+            "keywords": ["headache", "migraine", "head hurts", "pounding", "head pain", "head ache"],
             "prefer_categories": ["Beverages"],
-            "prefer_keywords": ["coffee", "tea", "lime", "juice"],
+            "prefer_keywords": ["coffee", "tea", "lime", "juice", "water"],
             "avoid_keywords": [],
-            "explanation": "☕ Headaches are often linked to dehydration or fatigue. A warm coffee or refreshing drink can help — make sure to stay hydrated!",
+            "explanation": "☕ Headaches are often linked to dehydration or fatigue. A warm coffee or refreshing drink can help — stay hydrated!",
             "avoid_msg": ""
         },
         {
-            "keywords": ["stress", "anxious", "anxiety", "worried", "tension", "panic", "depressed", "pressure", "exam"],
-            "prefer_categories": ["Beverages", "Desserts", "Snacks"],
-            "prefer_keywords": ["badam", "milk", "chocolate", "tea", "coffee"],
-            "avoid_keywords": [],
-            "explanation": "🧘 Comfort foods and warm drinks can help calm your mind during stressful times. Take a break and nourish yourself!",
-            "avoid_msg": ""
-        },
-        {
-            "keywords": ["tired", "fatigue", "exhausted", "sleepy", "drained", "low energy", "energy"],
-            "prefer_categories": ["Beverages", "Snacks", "Breakfast"],
-            "prefer_keywords": ["coffee", "tea", "juice", "snack"],
-            "avoid_keywords": [],
-            "explanation": "⚡ Feeling low on energy? A quick snack and an energizing drink will help you get back on track!",
-            "avoid_msg": ""
-        },
-        {
-            "keywords": ["hungry", "starving", "famished", "stomach", "empty", "appetite"],
-            "prefer_categories": ["Main Course", "Breakfast"],
-            "prefer_keywords": ["biryani", "meals", "rice", "dosa", "paratha", "curry"],
-            "avoid_keywords": [],
-            "explanation": "🍽️ You need a filling meal! Here are some hearty options from the canteen that will satisfy your hunger.",
-            "avoid_msg": ""
-        },
-        {
-            "keywords": ["gym", "workout", "protein", "muscle", "fitness", "gains", "training"],
-            "prefer_categories": ["Main Course", "Snacks"],
-            "prefer_keywords": ["chicken", "egg", "protein", "paneer"],
-            "avoid_keywords": [],
-            "explanation": "💪 Great work at the gym! These high-protein options will help your muscles recover and grow.",
-            "avoid_msg": ""
-        },
-        {
-            "keywords": ["nausea", "vomit", "indigestion", "acidity", "gas", "bloating", "upset"],
+            "keywords": ["nausea", "vomit", "indigestion", "acidity", "bloating", "gas", "throwing up", "stomach pain", "stomach ache", "tummy ache", "body pain", "back pain", "cramps", "period pain", "period cramps", "upset stomach"],
             "prefer_categories": ["Main Course", "Beverages"],
-            "prefer_keywords": ["curd", "buttermilk", "lime", "rice", "badam"],
+            "prefer_keywords": ["curd", "buttermilk", "lime", "rice", "badam", "plain"],
             "avoid_keywords": ["spicy", "fried", "chilli", "pepper"],
-            "explanation": "🫶 For stomach troubles, light and easy-to-digest foods are your best friend. Avoid spicy or heavy meals.",
+            "explanation": "🫶 For stomach troubles, light and easy-to-digest foods are your best friend. These options are gentle and soothing.",
             "avoid_msg": "Spicy, fried, or heavy foods"
+        },
+
+        # ── HUNGER & THIRST ───────────────────────────────────────────────────
+        {
+            "keywords": ["very hungry", "super hungry", "extremely hungry", "starving", "famished", "havent eaten", "haven't eaten", "dying of hunger", "stomach growling"],
+            "prefer_categories": ["Main Course", "Biryani"],
+            "prefer_keywords": ["biryani", "meals", "curry", "chicken", "mutton", "rice", "paratha", "naan"],
+            "avoid_keywords": [],
+            "explanation": "🍽️ You're very hungry! Here are the most filling and satisfying options from the canteen to fuel you up fast!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["hungry", "need food", "appetite", "need to eat", "stomach empty", "want to eat", "feeling hungry", "bit hungry"],
+            "prefer_categories": ["Main Course", "Breakfast", "Snacks"],
+            "prefer_keywords": ["biryani", "meals", "rice", "dosa", "paratha", "curry", "sandwich", "wrap"],
+            "avoid_keywords": [],
+            "explanation": "🍽️ You need a good meal! Here are some hearty options from the canteen that will satisfy your hunger.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["dehydrated", "thirsty", "parched", "dry mouth", "need water", "very thirsty", "dehydration", "need fluids", "need to hydrate"],
+            "prefer_categories": ["Beverages"],
+            "prefer_keywords": ["lime", "juice", "coconut", "buttermilk", "water", "lemon", "soda", "fresh"],
+            "avoid_keywords": [],
+            "explanation": "💧 Staying hydrated is super important! Here are some refreshing drinks from the canteen to replenish your fluids!",
+            "avoid_msg": ""
+        },
+
+        # ── ENERGY & FITNESS ──────────────────────────────────────────────────
+        {
+            "keywords": ["gym", "workout", "exercise", "lifting", "post workout", "pre workout", "body building", "bulking", "cutting", "muscle", "fitness", "gains", "training", "need protein", "want protein"],
+            "prefer_categories": ["Main Course", "Snacks"],
+            "prefer_keywords": ["chicken", "egg", "paneer", "grilled", "protein", "boiled", "tikka"],
+            "avoid_keywords": [],
+            "explanation": "💪 Great work! These high-protein options will fuel your muscles, support recovery, and help you reach your fitness goals.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["energetic", "full of energy", "pumped", "active", "feeling great", "on fire", "energised", "energized"],
+            "prefer_categories": ["Main Course", "Snacks", "Beverages"],
+            "prefer_keywords": ["juice", "fruit", "salad", "chicken", "wrap", "biryani"],
+            "avoid_keywords": [],
+            "explanation": "🔥 You're full of energy today! Keep the momentum going with these power-packed options from the canteen!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["tired", "fatigue", "exhausted", "drained", "low energy", "no energy", "lethargic", "feeling weak", "weak"],
+            "prefer_categories": ["Beverages", "Snacks", "Breakfast"],
+            "prefer_keywords": ["coffee", "tea", "juice", "energy", "snack", "oatmeal", "smoothie"],
+            "avoid_keywords": [],
+            "explanation": "⚡ Feeling low on energy? These energizing options will give you the boost you need to get back on track!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["sleepy", "drowsy", "cant keep eyes open", "falling asleep", "sluggish", "groggy", "need coffee"],
+            "prefer_categories": ["Beverages"],
+            "prefer_keywords": ["coffee", "espresso", "latte", "cold coffee", "cappuccino", "tea"],
+            "avoid_keywords": [],
+            "explanation": "☕ Feeling sleepy? A good cup of coffee or tea will wake you right up! Caffeine is your best friend right now.",
+            "avoid_msg": ""
+        },
+
+        # ── STRESS & ANXIETY ──────────────────────────────────────────────────
+        {
+            "keywords": ["stressed", "stress", "pressure", "burnout", "overwhelmed", "too much work", "overloaded", "cant handle", "mental pressure", "breaking down"],
+            "prefer_categories": ["Beverages", "Desserts", "Snacks"],
+            "prefer_keywords": ["badam", "milk", "chocolate", "tea", "coffee", "green tea"],
+            "avoid_keywords": [],
+            "explanation": "🧘 Stress is tough — but the right food can help calm your mind. Treat yourself and remember: you've got this!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["anxious", "anxiety", "nervous", "jittery", "uneasy", "on edge", "panic", "worried", "restless", "unsettled"],
+            "prefer_categories": ["Beverages", "Snacks"],
+            "prefer_keywords": ["green tea", "badam", "milk", "warm", "light", "juice", "smoothie"],
+            "avoid_keywords": [],
+            "explanation": "🌿 When you're anxious or nervous, calming and light foods work best. Try something warm and soothing — it really helps!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["angry", "furious", "irritated", "irritable", "mad", "rage", "frustrated", "annoyed", "pissed", "aggravated"],
+            "prefer_categories": ["Desserts", "Beverages", "Snacks"],
+            "prefer_keywords": ["chocolate", "ice cream", "juice", "sweet", "cool", "cold"],
+            "avoid_keywords": ["spicy"],
+            "explanation": "😤 Cool down with something sweet and refreshing! A treat can do wonders for your mood right now.",
+            "avoid_msg": "Spicy foods that may increase irritation"
+        },
+
+        # ── NEGATIVE EMOTIONS ─────────────────────────────────────────────────
+        {
+            "keywords": ["sad", "unhappy", "heartbroken", "miserable", "down", "gloomy", "low", "feeling sad", "crying", "blue", "tearful"],
+            "prefer_categories": ["Desserts", "Snacks", "Beverages"],
+            "prefer_keywords": ["chocolate", "ice cream", "cake", "brownie", "milkshake", "sweet", "donut"],
+            "avoid_keywords": [],
+            "explanation": "🫂 Sending you a virtual hug! Comfort food is exactly what you need right now. Sweet treats have a way of lifting the spirit 💛",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["depressed", "depression", "hopeless", "empty feeling", "numb", "worthless", "no motivation", "lost"],
+            "prefer_categories": ["Desserts", "Beverages", "Main Course"],
+            "prefer_keywords": ["chocolate", "warm", "badam", "milk", "soup", "rasam", "comfort"],
+            "avoid_keywords": [],
+            "explanation": "💛 You matter, and it's okay to not be okay. Nourish yourself with something warm and comforting today. One step at a time 🌻",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["lonely", "alone", "isolated", "missing someone", "homesick", "by myself", "no one around"],
+            "prefer_categories": ["Desserts", "Beverages", "Snacks"],
+            "prefer_keywords": ["chocolate", "warm", "milkshake", "coffee", "cake", "comfort"],
+            "avoid_keywords": [],
+            "explanation": "🤗 Even solo meals can be special! Treat yourself to something you love — great food is great company 💛",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["guilty", "regret", "embarrassed", "ashamed", "jealous", "envy", "feel bad about myself"],
+            "prefer_categories": ["Desserts", "Beverages"],
+            "prefer_keywords": ["chocolate", "ice cream", "tea", "coffee", "sweet"],
+            "avoid_keywords": [],
+            "explanation": "🍫 We all have those moments! Treat yourself to something sweet — food has a magical way of making things feel a little better.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["bored", "boring day", "nothing to do", "uninterested", "dull", "monotonous", "no stimulation"],
+            "prefer_categories": ["Snacks", "Beverages", "Desserts"],
+            "prefer_keywords": ["popcorn", "fries", "chips", "nachos", "ice cream", "milkshake", "momos"],
+            "avoid_keywords": [],
+            "explanation": "😴 Bored? Let food be your entertainment! Here are some fun, indulgent snacks to make your day more interesting.",
+            "avoid_msg": ""
+        },
+
+        # ── POSITIVE EMOTIONS ─────────────────────────────────────────────────
+        {
+            "keywords": ["happy", "joyful", "cheerful", "great mood", "feeling amazing", "wonderful", "delighted", "ecstatic", "feeling good", "on top of the world"],
+            "prefer_categories": ["Main Course", "Desserts", "Snacks"],
+            "prefer_keywords": ["biryani", "pizza", "burger", "ice cream", "cake", "shake"],
+            "avoid_keywords": [],
+            "explanation": "😄 You're in a great mood — celebrate it with something delicious! Here are some crowd-favourite treats to keep those good vibes going!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["excited", "thrilled", "pumped up", "super excited", "hyped", "over the moon", "cant wait"],
+            "prefer_categories": ["Snacks", "Desserts", "Main Course"],
+            "prefer_keywords": ["burger", "pizza", "fries", "shake", "ice cream", "wrap"],
+            "avoid_keywords": [],
+            "explanation": "🎉 That excitement is contagious! Celebrate the moment with these fun and delicious picks from the canteen!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["celebratory", "celebration", "birthday", "won", "victory", "success", "special day", "special occasion", "achieved", "treat myself", "reward myself", "proud", "nailed it", "accomplished"],
+            "prefer_categories": ["Desserts", "Main Course", "Beverages"],
+            "prefer_keywords": ["cake", "ice cream", "biryani", "pizza", "shake", "special", "chicken"],
+            "avoid_keywords": [],
+            "explanation": "🏆 Celebration time! You deserve something special! Here are some festive and indulgent picks to make the moment unforgettable!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["romantic", "date", "in love", "crush", "valentines", "anniversary", "affectionate", "loved", "loved up"],
+            "prefer_categories": ["Desserts", "Beverages"],
+            "prefer_keywords": ["chocolate", "cake", "coffee", "latte", "shake", "sweet", "red velvet"],
+            "avoid_keywords": [],
+            "explanation": "💕 Feeling romantic? Sweet treats and cozy drinks set the perfect mood! Here are some lovely options for you.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["social", "with friends", "group eating", "hangout", "friends gathering", "eating together", "party food"],
+            "prefer_categories": ["Snacks", "Main Course"],
+            "prefer_keywords": ["pizza", "burger", "biryani", "fries", "momos", "wrap", "noodles"],
+            "avoid_keywords": [],
+            "explanation": "👫 Eating with your crew? Here are the best shareable and crowd-pleasing options from the canteen!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["grateful", "thankful", "blessed", "content", "satisfied", "peaceful", "at peace", "calm", "relaxed", "serene", "zen", "tranquil", "hopeful", "optimistic", "positive vibes", "good vibes"],
+            "prefer_categories": ["Beverages", "Snacks", "Healthy Options"],
+            "prefer_keywords": ["green tea", "juice", "fruit", "salad", "light", "healthy", "smoothie"],
+            "avoid_keywords": [],
+            "explanation": "🌸 In a peaceful state of mind? Enjoy something light and wholesome to match your calm, positive energy!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["motivated", "driven", "inspired", "creative", "determined", "focused", "goal mode", "productive", "study mode", "working hard", "concentrated", "on track", "ambitious", "brain food"],
+            "prefer_categories": ["Beverages", "Healthy Options", "Snacks"],
+            "prefer_keywords": ["coffee", "juice", "smoothie", "salad", "protein", "oatmeal", "nuts", "energy bar"],
+            "avoid_keywords": [],
+            "explanation": "🚀 You're in goal-getter mode! Fuel your focus with these energizing and nutritious picks to keep your momentum going!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["confident", "bold", "fearless", "unstoppable", "powerful", "strong feeling", "playful", "fun", "lighthearted", "carefree", "curious", "adventurous", "try something new"],
+            "prefer_categories": ["Main Course", "Snacks"],
+            "prefer_keywords": ["chicken", "biryani", "burger", "grilled", "special", "new", "fusion"],
+            "avoid_keywords": [],
+            "explanation": "😎 Feeling bold and adventurous? Go for something bold and satisfying — maybe even try something new from the canteen today!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["lazy", "cant be bothered", "rest day", "couch mode", "just chilling", "dont want to move"],
+            "prefer_categories": ["Snacks", "Beverages"],
+            "prefer_keywords": ["chips", "fries", "popcorn", "juice", "tea", "coffee"],
+            "avoid_keywords": [],
+            "explanation": "🛋️ Lazy mode activated! Here are some easy and satisfying options you can enjoy without any fuss.",
+            "avoid_msg": ""
+        },
+
+        # ── CRAVINGS ──────────────────────────────────────────────────────────
+        {
+            "keywords": ["craving sweet", "sweet tooth", "want something sweet", "sugar craving", "want dessert", "need sugar", "something sweet"],
+            "prefer_categories": ["Desserts"],
+            "prefer_keywords": ["cake", "ice cream", "chocolate", "brownie", "donut", "sweet", "shake", "pastry", "pudding"],
+            "avoid_keywords": [],
+            "explanation": "🍰 Sweet tooth alert! Here are the most delicious sweet treats the canteen has to offer — go ahead, you deserve it!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["craving spicy", "want spicy", "something hot and spicy", "spicy mood", "chilli craving", "fire food"],
+            "prefer_categories": ["Main Course", "Snacks"],
+            "prefer_keywords": ["spicy", "chilli", "masala", "pepper", "tikka", "tandoori", "hot"],
+            "avoid_keywords": [],
+            "explanation": "🌶️ Spicy food craving! Here are some fiery and flavourful options that'll satisfy your craving for heat!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["craving junk", "junk food", "fast food", "cheat meal", "cheat day", "unhealthy cravings", "want junk food"],
+            "prefer_categories": ["Snacks", "Main Course"],
+            "prefer_keywords": ["burger", "fries", "pizza", "wrap", "hot dog", "nachos", "chips"],
+            "avoid_keywords": [],
+            "explanation": "🍟 Cheat day? No judgement! Here are the ultimate junk food picks from the canteen to satisfy those cravings!",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["craving comfort food", "comfort food", "soul food", "home food", "nostalgic food", "want something warm and filling", "homesick food"],
+            "prefer_categories": ["Main Course", "Beverages"],
+            "prefer_keywords": ["rice", "dal", "rasam", "curd", "meals", "dosa", "sambar", "soup"],
+            "avoid_keywords": [],
+            "explanation": "🏠 Nothing beats comfort food! Here are some warm, homely options that will make you feel right at home.",
+            "avoid_msg": ""
+        },
+        {
+            "keywords": ["craving refreshment", "want cold drink", "something refreshing", "chilled drink", "iced drink", "something light and fresh"],
+            "prefer_categories": ["Beverages"],
+            "prefer_keywords": ["juice", "cold", "iced", "lime", "coconut", "soda", "lemon", "cool", "fresh", "smoothie"],
+            "avoid_keywords": [],
+            "explanation": "🧊 Ready for something cool and refreshing? These chilled beverages will hit the spot perfectly!",
+            "avoid_msg": ""
+        },
+
+        # ── TEMPERATURE ───────────────────────────────────────────────────────
+        {
+            "keywords": ["feeling hot", "overheated", "too hot", "sweating a lot", "hot weather", "summer heat", "heat"],
+            "prefer_categories": ["Beverages", "Desserts"],
+            "prefer_keywords": ["juice", "cold", "iced", "ice cream", "coconut", "lime", "cool", "soda", "lemon"],
+            "avoid_keywords": ["hot", "warm", "spicy"],
+            "explanation": "🌡️ Beat the heat with these cool and refreshing picks! Ice creams, cold drinks, and fresh juices to cool you down.",
+            "avoid_msg": "Hot, spicy or heavy foods that will make you feel warmer"
+        },
+        {
+            "keywords": ["feeling cold", "chilly", "shivering", "its cold", "cold outside", "winter", "need something warm"],
+            "prefer_categories": ["Beverages", "Main Course"],
+            "prefer_keywords": ["tea", "coffee", "soup", "warm", "hot", "rasam", "masala"],
+            "avoid_keywords": [],
+            "explanation": "🧣 Warm up from the inside out! Here are the cosiest warm drinks and hot meals to beat the cold.",
+            "avoid_msg": ""
         },
     ]
 
     matched_rule = None
+
+    # ── Greeting Detection ─────────────────────────────────────────────────
+    GREETING_WORDS = ["hello", "hi", "hey", "heyy", "helloo", "helo", "hai", "hii", "howdy", "good morning", "good afternoon", "good evening", "sup", "what's up", "whats up"]
+    if any(symptom_lower.strip() == g or symptom_lower.strip().startswith(g + " ") for g in GREETING_WORDS) or symptom_lower.strip() in GREETING_WORDS:
+        return {
+            "recommended_items": [],
+            "explanation": "👋 Hello! I'm Campus Bites AI — your personal canteen assistant! 🍽️\n\nTell me how you're feeling right now and I'll suggest the best meals for you.\n\nFor example, try saying:\n• 'I have a headache'\n• 'I feel stressed'\n• 'I have a cold'\n• 'I just did gym'\n• 'I'm very hungry'",
+            "avoid": [],
+            "powered_by": "greeting"
+        }
+
+    # ── Acknowledgement / Thank You Detection ──────────────────────────────
+    ACK_WORDS = ["ok", "okay", "thanks", "thank you", "thankyou", "thank u", "thx", "ty", "great", "got it", "noted", "nice", "cool", "awesome", "perfect", "bye", "goodbye", "see you", "cya", "alright", "sure", "fine", "done"]
+    if any(symptom_lower.strip() == a or symptom_lower.strip().startswith(a + " ") or symptom_lower.strip().endswith(" " + a) for a in ACK_WORDS) or symptom_lower.strip() in ACK_WORDS:
+        return {
+            "recommended_items": [],
+            "explanation": "😊 Glad I could help! Is there anything else I can assist you with?\n\nFeel free to tell me how you're feeling — whether it's a headache, stress, fatigue, or hunger — and I'll find the best canteen options for you! 🍽️",
+            "avoid": [],
+            "powered_by": "acknowledgement"
+        }
+
+    # ── Off-Topic Detection ────────────────────────────────────────────────
+    OFF_TOPIC_WORDS = ["maths", "math", "science", "physics", "chemistry", "biology", "history", "geography", "english", "coding", "programming", "homework", "assignment", "exam help", "study", "calculus", "algebra", "solve", "equation", "formula", "weather", "news", "sports", "cricket", "football", "movie", "song", "music", "politics", "stock", "finance", "investment", "joke", "story", "poem", "essay", "translate", "language"]
+    if any(w in symptom_lower for w in OFF_TOPIC_WORDS):
+        return {
+            "recommended_items": [],
+            "explanation": "🙏 Sorry, I can't help with that! I'm Campus Bites AI and I only assist with canteen-related queries.\n\nTell me how you're feeling physically or mentally (e.g., 'tired', 'stressed', 'have a cold') and I'll suggest the best food options for you from our canteen! 🍽️",
+            "avoid": [],
+            "powered_by": "off-topic"
+        }
+
     for rule in WELLNESS_RULES:
         if any(kw in symptom_lower for kw in rule["keywords"]):
             matched_rule = rule
             break
+
 
     if matched_rule:
         # Score items: category match + keyword match in name
@@ -1556,14 +1829,20 @@ async def update_order_status(order_id: str, status_data: dict, user: dict = Dep
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Order not found")
     
-    # Emit socket event for real-time updates
+    # Emit socket event for real-time updates - broadcast to BOTH rooms
     order = await db.orders.find_one({"order_id": order_id}, {"_id": 0})
     if order:
-        await sio.emit('order_update', {
+        event_payload = {
             'order_id': order_id,
             'status': new_status,
-            'canteen_id': order['canteen_id']
-        }, room=order['canteen_id'])
+            'canteen_id': order['canteen_id'],
+            'student_id': order['student_id'],
+            'token_number': order.get('token_number', ''),
+        }
+        # 1. Notify crew room → so all crew dashboards refresh their list
+        await sio.emit('order_update', event_payload, room=order['canteen_id'])
+        # 2. Notify student's personal room → so OrderTracking updates live
+        await sio.emit('order_update', event_payload, room=order['student_id'])
     
     return {"message": "Order status updated successfully", "status": new_status}
 

@@ -15,7 +15,16 @@ from typing import List, Dict, Any
 import json
 import re
 
+try:
+    import google.generativeai as genai
+    HAS_GEMINI = True
+except ImportError:
+    HAS_GEMINI = False
+
 EMERGENT_LLM_KEY = os.environ.get('EMERGENT_LLM_KEY')
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
+if HAS_GEMINI and GEMINI_API_KEY:
+    genai.configure(api_key=GEMINI_API_KEY)
 
 class AIService:
     def __init__(self):
@@ -86,11 +95,18 @@ class AIService:
                 "response_template": "💪 For your fitness goals, we recommend high-protein options like {items}."
             },
             "cold": {
-                "keywords": ["cold", "flu", "fever", "cough", "runny nose", "sneezing", "sick", "throat"],
+                "keywords": ["cold", "flu", "cough", "runny nose", "sneezing", "sick", "throat", "congestion"],
                 "categories": ["Beverages", "Soups"],
                 "items": ["Masala Tea", "Ginger Tea", "Filter Coffee", "Rasam", "Black Tea", "Pepper Rasam"],
                 "intent": "Cold & Flu Recovery",
                 "response_template": "🤧 Sorry to hear you're unwell! {items} are warm and soothing — they help ease congestion and soothe your throat. Stay hydrated!"
+            },
+            "fever": {
+                "keywords": ["fever", "high temperature", "chills", "sweating", "body heat", "burning up", "temperature"],
+                "categories": ["Beverages", "Main Course"],
+                "items": ["Curd Rice", "Coconut Water", "Lime Juice", "Plain Rice", "Rasam", "Buttermilk"],
+                "intent": "Fever Recovery",
+                "response_template": "🌡️ When you have a fever, your body needs light, easy-to-digest foods and plenty of fluids. {items} will help keep you hydrated and nourished. Avoid heavy or spicy foods and rest well!"
             },
             "pain": {
                 "keywords": ["pain", "stomach", "nausea", "vomit", "indigestion", "acidity", "gas", "bloating"],
@@ -241,148 +257,138 @@ class AIService:
 
     async def generate_weekly_diet_plan(self, goal: str, current_weight: float, target_weight: float, available_items: List[Dict], **kwargs) -> Dict:
         """
-        Goal-Oriented Optimization (DSA meets AI)
-        Implementation of 0/1 Knapsack Algorithm to find exact protein match.
+        AI-Powered Goal-Oriented Optimization
+        Uses Google Gemini to generate a personalized weekly diet plan based on canteen available items.
         """
         # Determine target protein based on goal
-        if kwargs.get('protein_goal'):
-            target_protein = int(kwargs.get('protein_goal'))
-        else:
-            # Rough estimate if not provided
-            target_protein = 20 # Default for single meal calculation logic
+        target_protein = int(kwargs.get('protein_goal', 20))
             
-        # Filter relevant items (e.g. not beverages unless protein shake)
-        # OPTIMIZATION: Convert protein to int for efficient Knapsack
-        food_items = []
+        # Extract lightweight item dataset for the LLM
+        food_catalog = []
         for i in available_items:
-             try:
-                 p = i["nutrition"]["protein"]
-                 if p > 0:
-                     # Create a lightweight dict for the algorithm to avoid modifying original or deep copy issues
-                     item_copy = i.copy()
-                     item_copy["nutrition"] = i["nutrition"].copy() # Shallow copy nutrition dict
-                     item_copy["nutrition"]["protein"] = int(round(p))
-                     food_items.append(item_copy)
-             except:
-                 continue
+            try:
+                food_catalog.append({
+                    "id": i["item_id"],
+                    "name": i["name"],
+                    "protein": int(round(i.get("nutrition", {}).get("protein", 0))),
+                    "cals": int(round(i.get("nutrition", {}).get("calories", 0))),
+                    "canteen": i.get("canteen_id")
+                })
+            except Exception:
+                continue
         
-        # KNAPSACK ALGORITHM IMPLEMENTATION
-        # We want to find a combination of items where total protein is closest to target_protein
-        # This is a variation of Subset Sum / Knapsack. 
-        # Since user wants "exact 20 if not possible nearest one", we can treat protein as "weight".
-        # We want to minimize |sum(protein) - target|.
-        
-        # Simple recursion with memoization for "Subset Sum" problem
-        # Returns: (closest_sum, list_of_items)
-        
-        memo = {}
-        
-        def find_closest_subset(index, current_sum):
-            state = (index, current_sum)
-            if state in memo: return memo[state]
+        # Check if we can use Gemini
+        if not HAS_GEMINI or not GEMINI_API_KEY:
+            # Fallback to a basic random/popular distribution if Gemini isn't available
+            import random
+            daily_cals = 2000
+            weekly_plan = {}
+            days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
             
-            if index >= len(food_items):
-                return current_sum, []
+            protein_items = [i for i in available_items if i.get("nutrition", {}).get("protein", 0) > 0]
+            if not protein_items: protein_items = available_items[:5]
             
-            # Choice 1: Exclude current item
-            sum1, items1 = find_closest_subset(index + 1, current_sum)
-            
-            # Choice 2: Include current item (if it doesn't vastly exceed target, purely efficiently)
-            # Relaxation: We allow exceeding target slightly to find "nearest" (upper or lower)
-            if current_sum + food_items[index]["nutrition"]["protein"] <= target_protein * 1.5: 
-                sum2, items2 = find_closest_subset(index + 1, current_sum + food_items[index]["nutrition"]["protein"])
-                items2 = [food_items[index]] + items2
-            else:
-                sum2 = float('inf')
-                items2 = []
-            
-            # Compare which sum is closer to target
-            diff1 = abs(target_protein - sum1)
-            diff2 = abs(target_protein - sum2)
-            
-            if diff1 <= diff2:
-                result = (sum1, items1)
-            else:
-                result = (sum2, items2)
+            for day in days:
+                sel = random.sample(protein_items, min(3, len(protein_items)))
+                day_plan = {}
+                meals = ["breakfast", "lunch", "dinner"]
+                for idx, meal in enumerate(meals):
+                    if idx < len(sel):
+                        day_plan[meal] = {
+                            "item_id": sel[idx]["item_id"], 
+                            "item_name": sel[idx]["name"], 
+                            "protein": sel[idx].get("nutrition", {}).get("protein", 0),
+                            "image_url": sel[idx].get("image_url"),
+                            "price": sel[idx].get("price"),
+                            "canteen_id": sel[idx].get("canteen_id")
+                        }
+                weekly_plan[day] = day_plan
                 
-            memo[state] = result
-            return result
+            return {
+                "daily_calories": daily_cals,
+                "protein_target": target_protein,
+                "tips": ["(Fallback Mode Activated - API Key Missing)", f"Target Protein per Meal: {target_protein}g", "Drink plenty of water."],
+                "weekly_plan": weekly_plan
+            }
             
-        best_sum, best_items = find_closest_subset(0, 0)
-        
-        # Format for weekly plan (User asked for Plan, but Knapsack is usually for a specific meal/day constraint)
-        # We will distribute these "Best Fit" items across the days
-        
-        weekly_plan = {}
-        days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-        
-        # If we didn't find good items, just fill randomly (fallback) but the algorithm above should work
-        if not best_items:
-             best_items = food_items[:3]
-             
-        import random
-        
-        # Available variations for slight randomization (simulate variety)
-        # We will try to find other items with similar protein count
-        similar_items = []
-        if best_items:
-             avg_protein = sum(i["nutrition"]["protein"] for i in best_items) / len(best_items)
-             similar_items = [i for i in food_items if abs(i["nutrition"]["protein"] - avg_protein) < 5]
-        
-        if not similar_items:
-             similar_items = best_items
+        # Advanced LLM Prompt for true Personalization
+        prompt = f"""
+        You are an expert, professional AI nutritionist for a college campus.
+        Generate a comprehensive 7-day meal plan for a student based purely on the items available in the college canteen.
 
-        for day in days:
-            # Distribute the knapsack result items with some variation
-            # We shuffle similar items every day so it's not IDENTICAL every day
-            daily_selection = list(similar_items)
-            random.shuffle(daily_selection)
+        USER PROFILE:
+        - Goal: {goal}
+        - Current Weight: {current_weight} kg
+        - Target Weight: {target_weight} kg
+        - Target Protein per meal: ~{target_protein}g
+
+        AVAILABLE CANTEEN MENU (Use ONLY items from this list by their exact 'id' and 'name'):
+        {json.dumps(food_catalog)}
+
+        REQUIREMENTS:
+        1. Create a full plan for Monday through Sunday.
+        2. Format EXACTLY as the JSON structure below without any markdown formatting or code blocks.
+        3. Make sure the meals differ slightly day-by-day so it does not get boring.
+        4. Focus on higher protein if the goal is muscle gain, or lower calories if the goal is weight loss.
+
+        EXPECTED JSON OUTPUT FORMAT:
+        {{
+           "daily_calories": 2400,
+           "protein_target": {target_protein},
+           "tips": [
+                "Give 3 very actionable, specific tips based on their weight goal ({goal}) and canteen choices."
+           ],
+           "weekly_plan": {{
+               "Monday": {{
+                  "breakfast": {{"item_id": "item123", "item_name": "Oatmeal", "protein": 10}},
+                  "lunch": {{"item_id": "item456", "item_name": "Chicken Salad", "protein": 30}},
+                  "dinner": {{"item_id": "item789", "item_name": "Protein Shake", "protein": 25}}
+               }},
+               "Tuesday": {{
+                  // Same structure
+               }}
+               // Repeat for all 7 days exactly
+           }}
+        }}
+        """
+
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            # Run the synchronous API call in a thread to keep FastAPI completely async and fast
+            import asyncio
+            response = await asyncio.to_thread(model.generate_content, prompt)
             
-            # Ensure we have enough
-            if len(daily_selection) < 3:
-                daily_selection = (daily_selection * 3)[:3]
-
-            day_plan = {}
-            if len(daily_selection) > 0: 
-                day_plan["breakfast"] = {
-                    "item_id": daily_selection[0]["item_id"], 
-                    "item_name": daily_selection[0]["name"], 
-                    "protein": daily_selection[0]["nutrition"]["protein"],
-                    "image_url": daily_selection[0].get("image_url"),
-                    "price": daily_selection[0].get("price"),
-                    "canteen_id": daily_selection[0].get("canteen_id")
-                }
-            if len(daily_selection) > 1: 
-                day_plan["lunch"] = {
-                    "item_id": daily_selection[1]["item_id"], 
-                    "item_name": daily_selection[1]["name"], 
-                    "protein": daily_selection[1]["nutrition"]["protein"],
-                    "image_url": daily_selection[1].get("image_url"),
-                    "price": daily_selection[1].get("price"),
-                    "canteen_id": daily_selection[1].get("canteen_id")
-                }
-            if len(daily_selection) > 2: 
-                day_plan["dinner"] = {
-                    "item_id": daily_selection[2]["item_id"], 
-                    "item_name": daily_selection[2]["name"], 
-                    "protein": daily_selection[2]["nutrition"]["protein"],
-                    "image_url": daily_selection[2].get("image_url"),
-                    "price": daily_selection[2].get("price"),
-                    "canteen_id": daily_selection[2].get("canteen_id")
-                }
+            # Clean the markdown off the JSON response
+            text = response.text.strip()
+            if text.startswith('```json'): text = text[7:-3].strip()
+            elif text.startswith('```'): text = text[3:-3].strip()
             
-            weekly_plan[day] = day_plan
-
-        return {
-            "daily_calories": 2000,
-            "protein_target": target_protein,
-            "tips": [
-                f"Based on your goal, we optimized using Knapsack Algorithm.",
-                f"Target Protein: {target_protein}g",
-                f"Achieved Protein in Meal: {best_sum}g (Closest match)"
-            ],
-            "weekly_plan": weekly_plan
-        }
+            data = json.loads(text)
+            
+            # Map back image_url, price, canteen_id from original objects 
+            # (since we didn't send them to the LLM to save tokens)
+            item_lookup = {i["item_id"]: i for i in available_items}
+            
+            if "weekly_plan" in data:
+                for day, meals in data["weekly_plan"].items():
+                    for meal_type, meal_data in meals.items():
+                        lookup = item_lookup.get(meal_data.get("item_id"))
+                        if lookup:
+                            meal_data["image_url"] = lookup.get("image_url")
+                            meal_data["price"] = lookup.get("price")
+                            meal_data["canteen_id"] = lookup.get("canteen_id")
+            
+            return data
+            
+        except Exception as e:
+            print(f"Gemini API Error: {str(e)}")
+            # Return basic empty structure to gracefully handle failure
+            return {
+                "daily_calories": 2000,
+                "protein_target": target_protein,
+                "tips": ["Could not generate AI plan at this moment. Please try again later."],
+                "weekly_plan": {}
+            }
 
     async def get_crew_assistance(self, query: str, context: Dict = None) -> Dict:
         """

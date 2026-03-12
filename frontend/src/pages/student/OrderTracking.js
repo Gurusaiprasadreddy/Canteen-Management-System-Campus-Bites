@@ -26,6 +26,11 @@ export default function OrderTracking() {
     // Initialize WebSocket
     const socket = getSocket();
 
+    // If already connected, join room immediately
+    if (socket.connected) {
+      joinRoom(user.user_id);
+    }
+
     socket.on('connect', () => {
       setIsConnected(true);
       joinRoom(user.user_id);
@@ -37,14 +42,42 @@ export default function OrderTracking() {
 
     socket.on('order_update', (data) => {
       if (data.student_id === user.user_id) {
-        toast.success(`Order #${data.order_id.slice(-6)} updated to ${data.status}`);
-        fetchOrders();
+        // Instantly update order status in state — no refetch needed!
+        setOrders(prev => {
+          const updated = prev.map(order =>
+            order.order_id === data.order_id
+              ? { ...order, status: data.status }
+              : order
+          ).filter(order => data.status !== 'COMPLETED' && data.status !== 'CANCELLED'
+            ? true
+            : order.order_id !== data.order_id
+          );
+          return updated;
+        });
+
+        // Friendly toast per status
+        const statusMessages = {
+          PREPARING: `🍳 Token #${data.token_number || data.order_id.slice(-6)} — Your order is being prepared!`,
+          READY: `✅ Token #${data.token_number || data.order_id.slice(-6)} — Your order is READY! Go pick it up!`,
+          COMPLETED: `🎉 Token #${data.token_number || data.order_id.slice(-6)} — Order completed. Enjoy!`,
+          CANCELLED: `❌ Token #${data.token_number || data.order_id.slice(-6)} — Your order was cancelled.`,
+        };
+        const msg = statusMessages[data.status] || `Order updated to ${data.status}`;
+        if (data.status === 'READY' || data.status === 'COMPLETED') {
+          toast.success(msg, { duration: 6000 });
+        } else if (data.status === 'CANCELLED') {
+          toast.error(msg, { duration: 6000 });
+        } else {
+          toast.info(msg);
+        }
       }
     });
 
     return () => {
       leaveRoom(user.user_id);
       socket.off('order_update');
+      socket.off('connect');
+      socket.off('disconnect');
     };
   }, [user?.user_id, navigate]);
 

@@ -54,6 +54,12 @@ export default function CrewDashboard() {
     const canteenId = selectedCanteen; // Use selected canteen
     const socket = getSocket();
 
+    // If already connected, join room immediately
+    if (socket.connected) {
+      setIsConnected(true);
+      joinRoom(canteenId);
+    }
+
     socket.on('connect', () => {
       setIsConnected(true);
       joinRoom(canteenId);
@@ -65,10 +71,29 @@ export default function CrewDashboard() {
 
     socket.on('order_update', (data) => {
       if (data.canteen_id === canteenId) {
-        toast.success(`New order received: #${data.token_number || data.order_id.slice(-6)}`);
-        fetchOrders();
-        fetchPriorityOrders();
-        fetchStats();
+        setLastUpdated(new Date());
+
+        // Instantly update order status in local state
+        setOrders(prev => {
+          // Check if this order already exists in state
+          const exists = prev.some(o => o.order_id === data.order_id);
+          if (!exists) {
+            // New order arrived — fetch full list to get all details
+            fetchOrders();
+            fetchPriorityOrders();
+            fetchStats();
+            toast.success(`🆕 New order received: #${data.token_number || data.order_id.slice(-6)}`);
+            return prev;
+          }
+          // Existing order — update status in-place instantly
+          if (data.status === 'COMPLETED' || data.status === 'CANCELLED') {
+            // Remove from active list
+            return prev.filter(o => o.order_id !== data.order_id);
+          }
+          return prev.map(o =>
+            o.order_id === data.order_id ? { ...o, status: data.status } : o
+          );
+        });
       }
     });
 
@@ -81,8 +106,11 @@ export default function CrewDashboard() {
     return () => {
       leaveRoom(canteenId);
       socket.off('order_update');
+      socket.off('connect');
+      socket.off('disconnect');
       clearInterval(interval);
     };
+
   }, [user?.user_id, navigate, selectedCanteen]); // Added selectedCanteen dependency
 
   const fetchOrders = async () => {
