@@ -8,7 +8,6 @@ import api from '@/utils/api';
 import { getAuth, clearAuth } from '@/utils/auth';
 import { getSocket, joinRoom, leaveRoom } from '@/utils/socket';
 import { toast } from 'sonner';
-import CrewChat from './CrewChat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
