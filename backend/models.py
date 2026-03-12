@@ -98,8 +98,17 @@ class MenuItemCreate(BaseModel):
     prep_time: int
 
 class MenuItemUpdate(BaseModel):
+    name: Optional[str] = None
+    canteen_id: Optional[str] = None
     price: Optional[float] = None
+    nutrition: Optional[Nutrition] = None
+    ingredients: Optional[str] = None
+    allergens: Optional[str] = None
     stock_qty: Optional[int] = None
+    category: Optional[str] = None
+    image_url: Optional[str] = None
+    veg_type: Optional[str] = None
+    prep_time: Optional[int] = None
     available: Optional[bool] = None
 
 # Order Models

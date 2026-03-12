@@ -18,6 +18,8 @@ export default function MenuManagement() {
   const [canteens, setCanteens] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [selectedCanteen, setSelectedCanteen] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -130,6 +132,70 @@ export default function MenuManagement() {
       veg_type: 'veg',
       prep_time: '10'
     });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const payload = {
+        name: formData.name,
+        canteen_id: formData.canteen_id,
+        price: parseFloat(formData.price),
+        nutrition: {
+          calories: parseInt(formData.calories),
+          carbs: parseFloat(formData.carbs),
+          protein: parseFloat(formData.protein),
+          fat: parseFloat(formData.fat),
+          fiber: parseFloat(formData.fiber),
+          vitamins: formData.vitamins,
+          sodium: parseFloat(formData.sodium)
+        },
+        ingredients: formData.ingredients,
+        allergens: formData.allergens,
+        stock_qty: parseInt(formData.stock_qty),
+        category: formData.category,
+        image_url: formData.image_url,
+        veg_type: formData.veg_type,
+        prep_time: parseInt(formData.prep_time)
+      };
+
+      await api.patch(`/menu/${editingItem.item_id}`, payload);
+      toast.success('Menu item updated successfully!');
+      setShowEditModal(false);
+      setEditingItem(null);
+      fetchData();
+      resetForm();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to update item');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClick = (item) => {
+    setEditingItem(item);
+    setFormData({
+      name: item.name,
+      canteen_id: item.canteen_id,
+      price: item.price.toString(),
+      calories: item.nutrition?.calories?.toString() || '',
+      carbs: item.nutrition?.carbs?.toString() || '',
+      protein: item.nutrition?.protein?.toString() || '',
+      fat: item.nutrition?.fat?.toString() || '',
+      fiber: item.nutrition?.fiber?.toString() || '',
+      vitamins: item.nutrition?.vitamins || '',
+      sodium: item.nutrition?.sodium?.toString() || '',
+      ingredients: item.ingredients || '',
+      allergens: item.allergens || '',
+      stock_qty: item.stock_qty.toString(),
+      category: item.category,
+      image_url: item.image_url || '',
+      veg_type: item.veg_type,
+      prep_time: item.prep_time?.toString() || '10'
+    });
+    setShowEditModal(true);
   };
 
   const handleUpdateStock = async (itemId, newStock) => {
@@ -329,6 +395,15 @@ export default function MenuManagement() {
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="h-8 w-8 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10"
+                    onClick={() => handleEditClick(item)}
+                    title="Edit Item"
+                  >
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     className="h-8 w-8 text-red-500 hover:text-red-400 hover:bg-red-500/10"
                     onClick={() => handleDelete(item.item_id)}
                     title="Delete Item"
@@ -441,6 +516,106 @@ export default function MenuManagement() {
                 <Button type="button" variant="outline" onClick={() => { setShowAddModal(false); resetForm(); }} className="flex-1">Cancel</Button>
                 <Button type="submit" disabled={loading} className="flex-1 bg-orange-500 hover:bg-orange-600">
                   {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Adding...</> : 'Add Item'}
+                </Button>
+              </div>
+            </form>
+          </motion.div>
+        </div>
+      )}
+
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-gray-800 rounded-3xl p-8 max-w-2xl w-full my-8"
+          >
+            <h2 className="text-2xl font-bold mb-6">Edit Menu Item</h2>
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit-name">Item Name</Label>
+                  <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-canteen">Canteen</Label>
+                  <select id="edit-canteen" value={formData.canteen_id} onChange={(e) => setFormData({ ...formData, canteen_id: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
+                    {canteens.map(c => (
+                      <option key={c.canteen_id} value={c.canteen_id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-price">Price (₹)</Label>
+                  <Input id="edit-price" type="number" step="0.01" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-category">Category</Label>
+                  <Input id="edit-category" value={formData.category} onChange={(e) => setFormData({ ...formData, category: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-veg_type">Type</Label>
+                  <select id="edit-veg_type" value={formData.veg_type} onChange={(e) => setFormData({ ...formData, veg_type: e.target.value })} className="w-full px-3 py-2 rounded-xl bg-gray-700 text-white border-gray-600">
+                    <option value="veg">Vegetarian</option>
+                    <option value="non-veg">Non-Vegetarian</option>
+                  </select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-stock_qty">Stock Quantity</Label>
+                  <Input id="edit-stock_qty" type="number" value={formData.stock_qty} onChange={(e) => setFormData({ ...formData, stock_qty: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-calories">Calories</Label>
+                  <Input id="edit-calories" type="number" value={formData.calories} onChange={(e) => setFormData({ ...formData, calories: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-protein">Protein (g)</Label>
+                  <Input id="edit-protein" type="number" step="0.1" value={formData.protein} onChange={(e) => setFormData({ ...formData, protein: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-carbs">Carbs (g)</Label>
+                  <Input id="edit-carbs" type="number" step="0.1" value={formData.carbs} onChange={(e) => setFormData({ ...formData, carbs: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-fat">Fat (g)</Label>
+                  <Input id="edit-fat" type="number" step="0.1" value={formData.fat} onChange={(e) => setFormData({ ...formData, fat: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-fiber">Fiber (g)</Label>
+                  <Input id="edit-fiber" type="number" step="0.1" value={formData.fiber} onChange={(e) => setFormData({ ...formData, fiber: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit-sodium">Sodium (mg)</Label>
+                  <Input id="edit-sodium" type="number" step="0.1" value={formData.sodium} onChange={(e) => setFormData({ ...formData, sodium: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-ingredients">Ingredients</Label>
+                <Input id="edit-ingredients" value={formData.ingredients} onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })} required className="bg-gray-700 text-white border-gray-600" />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-allergens">Allergens</Label>
+                <Input id="edit-allergens" value={formData.allergens} onChange={(e) => setFormData({ ...formData, allergens: e.target.value })} placeholder="e.g., Dairy, Gluten" className="bg-gray-700 text-white border-gray-600" />
+              </div>
+
+              <div className="flex gap-4 mt-6">
+                <Button type="button" variant="outline" onClick={() => { setShowEditModal(false); setEditingItem(null); resetForm(); }} className="flex-1">Cancel</Button>
+                <Button type="submit" disabled={loading} className="flex-1 bg-blue-500 hover:bg-blue-600">
+                  {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</> : 'Save Changes'}
                 </Button>
               </div>
             </form>
