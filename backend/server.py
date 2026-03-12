@@ -2128,6 +2128,80 @@ async def get_all_bills(user: dict = Depends(get_current_user)):
     ).sort("timestamp", -1).to_list(100)
     return bills
 
+
+@api_router.get("/spending/category-breakdown")
+async def get_category_breakdown(user: dict = Depends(get_current_user)):
+    """Break down spending into Meals, Beverages, and Snacks from completed orders"""
+    orders = await db.orders.find(
+        {"student_id": user['user_id'], "status": "COMPLETED"},
+        {"_id": 0, "items": 1}
+    ).to_list(10000)
+
+    totals = {"Meals": 0.0, "Beverages": 0.0, "Snacks": 0.0}
+
+    beverage_kw = ["tea", "coffee", "juice", "lime", "lassi", "milk", "water", "soda",
+                   "drink", "shake", "smoothie", "lemonade", "buttermilk", "chai",
+                   "cola", "sherbet", "cooler", "squash", "filter"]
+    snack_kw    = ["cutlet", "samosa", "vada", "pakora", "sandwich", "roll", "wrap",
+                   "fries", "chips", "momos", "puff", "bun", "toast", "bread",
+                   "popcorn", "nachos", "cake", "brownie", "pastry", "donut", "cookie",
+                   "ice cream", "gulab", "halwa", "kheer", "pudding", "sweet", "ladoo",
+                   "barfi", "jalebi", "snack", "dessert"]
+
+    for order in orders:
+        for item in order.get("items", []):
+            name  = (item.get("item_name") or "").lower()
+            price = float(item.get("price_at_order", 0)) * int(item.get("quantity", 1))
+            cat   = (item.get("category") or "").lower()
+
+            if "beverage" in cat or "drink" in cat or any(k in name for k in beverage_kw):
+                totals["Beverages"] += price
+            elif "snack" in cat or "dessert" in cat or any(k in name for k in snack_kw):
+                totals["Snacks"] += price
+            else:
+                totals["Meals"] += price
+
+    return [{"category": k, "amount": round(v, 2)} for k, v in totals.items()]
+
+
+@api_router.get("/spending/flavor-profile")
+async def get_flavor_profile(user: dict = Depends(get_current_user)):
+    """Return flavor profile percentages (Spicy/Sweet/Savory/Sour/Rich) from ordered items"""
+    orders = await db.orders.find(
+        {"student_id": user['user_id'], "status": "COMPLETED"},
+        {"_id": 0, "items": 1}
+    ).to_list(10000)
+
+    flavor_counts = {"Spicy": 0, "Sweet": 0, "Savory": 0, "Sour": 0, "Rich": 0}
+    kw_map = {
+        "Spicy":  ["spicy", "chilli", "chili", "pepper", "masala", "tikka", "tandoori", "hot", "schezwan", "peri"],
+        "Sweet":  ["sweet", "cake", "dessert", "ice cream", "chocolate", "gulab", "halwa", "kheer",
+                   "jalebi", "brownie", "pastry", "donut", "cookie", "honey", "mango", "sugar"],
+        "Savory": ["biryani", "pulao", "rice", "naan", "roti", "curry", "dal", "paneer",
+                   "chicken", "mutton", "fish", "egg", "fried", "gravy", "sabzi", "sambar", "dosa"],
+        "Sour":   ["lime", "lemon", "tamarind", "curd", "yogurt", "lassi", "pickle",
+                   "raita", "buttermilk", "sour", "tomato"],
+        "Rich":   ["cream", "ghee", "cheese", "malai", "cashew", "almond",
+                   "special", "premium", "rich", "butter"],
+    }
+
+    for order in orders:
+        for item in order.get("items", []):
+            name = (item.get("item_name") or "").lower()
+            qty  = int(item.get("quantity", 1))
+            scores = {f: sum(1 for k in kws if k in name) for f, kws in kw_map.items()}
+            best_flavor = max(scores, key=scores.get)
+            if scores[best_flavor] == 0:
+                best_flavor = "Savory"
+            flavor_counts[best_flavor] += qty
+
+    total = max(sum(flavor_counts.values()), 1)
+    return [
+        {"subject": k, "value": round((v / total) * 100, 1)}
+        for k, v in flavor_counts.items()
+    ]
+
+
 # ============================================
 # MANAGEMENT ANALYTICS ENDPOINTS
 # ============================================
